@@ -1,0 +1,14 @@
+{
+  "voice_audio_files_unchanged": 121,
+  "all_voice_folder_files_unchanged": 123,
+  "audio_in_video": true,
+  "recorded_speech_start_seconds": 0.641375,
+  "audio_similarity_to_original": 0.9987384447490734,
+  "animations": 59,
+  "bones": 17,
+  "facial_controls": 21,
+  "neutral_export_weights": true,
+  "appearance_rest_fingerprint": "59f84978d6075291f42250b4b6860a6a600e7438313545e8d715f0f269518f25",
+  "unreal_runtime_tested": false,
+  "listening_review": "Not independently listened to by agent; rendered mouth frames inspected."
+}

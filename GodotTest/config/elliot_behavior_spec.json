@@ -1,0 +1,55 @@
+{
+  "ranges": {
+    "awareness_enter_m": 6.0,
+    "awareness_exit_m": 6.7,
+    "personal_enter_m": 1.55,
+    "personal_exit_m": 1.9,
+    "emergency_presence_m": 0.85,
+    "field_of_view_degrees": 130.0,
+    "player_gaze_degrees": 16.0
+  },
+  "timing": {
+    "notice_dwell_s": 0.25,
+    "glance_stare_s": 1.4,
+    "long_stare_s": 2.6,
+    "close_dwell_s": 0.3,
+    "follow_window_s": 4.5,
+    "follow_check_delay_s": 0.45,
+    "recover_state_s": 2.0,
+    "incident_quiet_s": 5.0
+  },
+  "motion": {
+    "approach_speed_mps": 0.24,
+    "moving_away_speed_mps": 0.18,
+    "followed_distance_gain_m": 0.08,
+    "expected_step_distance_m": 0.18,
+    "distance_smoothing_hz": 7.0
+  },
+  "nervousness": {
+    "watching_threshold": 0.12,
+    "nervous_idle_threshold": 0.3,
+    "warning_threshold": 0.72,
+    "recovery_threshold": 0.16,
+    "rise_hz": 2.4,
+    "fall_hz": 0.34,
+    "violation_half_life_s": 18.0,
+    "follow_memory_s": 12.0
+  },
+  "animation": {
+    "NERVOUS_IDLE": {"priority": 10, "cooldown_s": 0.0, "duration_s": 2.4},
+    "GLANCE_AWAY": {"priority": 40, "cooldown_s": 8.0, "duration_s": 1.65},
+    "STEP_BACK": {"priority": 70, "cooldown_s": 2.4, "duration_s": 1.2},
+    "NERVOUS_WARNING": {"priority": 90, "cooldown_s": 6.0, "duration_s": 1.35}
+  },
+  "events": {
+    "OnPlayerNoticed": {"priority": 20, "cooldown_s": 4.0},
+    "OnLongStare": {"priority": 45, "cooldown_s": 5.0},
+    "OnPlayerTooClose": {"priority": 70, "cooldown_s": 2.0},
+    "OnStepBack": {"priority": 75, "cooldown_s": 1.5},
+    "OnPlayerFollowed": {"priority": 85, "cooldown_s": 5.0},
+    "OnRepeatedBoundaryViolation": {"priority": 90, "cooldown_s": 6.0},
+    "OnWarning": {"priority": 100, "cooldown_s": 6.0},
+    "OnPlayerBackedOff": {"priority": 35, "cooldown_s": 4.0},
+    "OnRecovered": {"priority": 15, "cooldown_s": 8.0}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "soundFile": "D:\\Video Projects\\NPC Package\\Characters\\Elliot\\V3\\Performance\\Reusable\\audio\\CLOSE_01.wav",
+    "duration": 1.20
+  },
+  "mouthCues": [
+    { "start": 0.00, "end": 0.05, "value": "X" },
+    { "start": 0.05, "end": 0.13, "value": "A" },
+    { "start": 0.13, "end": 0.26, "value": "B" },
+    { "start": 0.26, "end": 0.54, "value": "E" },
+    { "start": 0.54, "end": 0.75, "value": "F" },
+    { "start": 0.75, "end": 0.84, "value": "A" },
+    { "start": 0.84, "end": 1.01, "value": "D" },
+    { "start": 1.01, "end": 1.08, "value": "B" },
+    { "start": 1.08, "end": 1.20, "value": "X" }
+  ]
+}

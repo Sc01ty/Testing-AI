@@ -1,0 +1,17 @@
+{
+  "mesh_reimport": {
+    "bones": 164,
+    "meshes": 31,
+    "facial_shapes": 12
+  },
+  "walk_animation_reimport": [
+    [
+      "ElliotRig|Scene",
+      [
+        1.0,
+        31.0
+      ]
+    ]
+  ],
+  "unreal_runtime_tested": false
+}

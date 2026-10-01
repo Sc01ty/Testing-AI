@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "soundFile": "D:\\Video Projects\\NPC Package\\Characters\\Elliot\\V3\\Performance\\Reusable\\audio\\MEMORY_01.wav",
+    "duration": 2.27
+  },
+  "mouthCues": [
+    { "start": 0.00, "end": 0.16, "value": "X" },
+    { "start": 0.16, "end": 0.38, "value": "D" },
+    { "start": 0.38, "end": 0.66, "value": "E" },
+    { "start": 0.66, "end": 1.43, "value": "B" },
+    { "start": 1.43, "end": 1.50, "value": "F" },
+    { "start": 1.50, "end": 2.13, "value": "C" },
+    { "start": 2.13, "end": 2.27, "value": "X" }
+  ]
+}

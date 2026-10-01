@@ -1,0 +1,343 @@
+{
+  "source_asset_commit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482",
+  "base_asset_license": "CC0",
+  "voice_integration": false,
+  "height_m": 1.82,
+  "bones": 164,
+  "facial_shapes": [
+    "Blink_Left",
+    "Blink_Right",
+    "Brow_Up",
+    "Brow_Down",
+    "Smile",
+    "Frown",
+    "Jaw_Open",
+    "Viseme_A",
+    "Viseme_E",
+    "Viseme_O",
+    "Viseme_MBP",
+    "Viseme_FV"
+  ],
+  "animations": [
+    {
+      "name": "ADJUST_SLEEVE",
+      "duration": 2.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "ANNOYED_REACTION",
+      "duration": 1.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "BACKPEDAL_SHORT",
+      "duration": 0.9333,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "BREAK_EYE_CONTACT",
+      "duration": 1.7,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "BUMP_RECOIL_LIGHT",
+      "duration": 0.8667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "BUMP_RECOIL_MEDIUM",
+      "duration": 0.8667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "CHECK_BEHIND",
+      "duration": 2.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "CLOSED_POSTURE",
+      "duration": 2.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "CONFUSED_REACTION",
+      "duration": 1.5,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "DEEP_BREATH",
+      "duration": 2.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "DOUBLE_TAKE",
+      "duration": 1.5,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "GLANCE_AWAY",
+      "duration": 1.6667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "HAND_UP_BOUNDARY",
+      "duration": 1.5,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "IDLE_NERVOUS_A",
+      "duration": 2.8,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "IDLE_NERVOUS_B",
+      "duration": 2.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "IDLE_NEUTRAL_A",
+      "duration": 3.6,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "IDLE_NEUTRAL_B",
+      "duration": 4.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "LONG_GLANCE",
+      "duration": 2.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "LOOK_AROUND",
+      "duration": 3.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "LOOK_AT_FLOOR",
+      "duration": 2.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "LOOK_BACK_AT_PLAYER",
+      "duration": 1.5,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "NERVOUS_IDLE",
+      "duration": 2.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "NERVOUS_WARNING",
+      "duration": 1.3667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "NOTICE_PLAYER",
+      "duration": 1.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_END_CALL",
+      "duration": 0.9,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_LISTEN_IDLE",
+      "duration": 3.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_LOOK_AT",
+      "duration": 2.4,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_LOWER_SLIGHTLY",
+      "duration": 0.7,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_NOTICE",
+      "duration": 1.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_PULL_OUT",
+      "duration": 1.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_PUT_AWAY",
+      "duration": 1.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_RAISE_TO_EAR",
+      "duration": 0.9667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_SCROLL",
+      "duration": 2.6,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "PHONE_TALK_IDLE",
+      "duration": 3.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "QUICK_GLANCE",
+      "duration": 0.7667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "REGAIN_BALANCE",
+      "duration": 1.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "RUB_HANDS",
+      "duration": 2.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "SCRATCH_NECK",
+      "duration": 2.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "SHOULDER_IMPACT_LEFT",
+      "duration": 0.9667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "SHOULDER_IMPACT_RIGHT",
+      "duration": 0.9667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "SIDE_STEP_LEFT",
+      "duration": 0.9,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "SIDE_STEP_RIGHT",
+      "duration": 0.9,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STEP_BACK",
+      "duration": 1.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STEP_BACK_FAST",
+      "duration": 0.6667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STEP_BACK_SMALL",
+      "duration": 1.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STEP_BACK_STARTLED",
+      "duration": 0.5333,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STOP_AND_LOOK_BACK",
+      "duration": 1.6,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "STUMBLE_BACK",
+      "duration": 0.7667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TOUCH_FACE",
+      "duration": 1.9,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TURN_AND_WALK_AWAY",
+      "duration": 1.2667,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TURN_AWAY_FROM_PLAYER",
+      "duration": 1.2,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TURN_LEFT",
+      "duration": 1.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TURN_RIGHT",
+      "duration": 1.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "TURN_TOWARD_PLAYER_PARTIAL",
+      "duration": 1.1,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "WALK_AWAY_NERVOUS",
+      "duration": 1.1333,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "WALK_BACKWARD",
+      "duration": 1.5333,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "WALK_FORWARD",
+      "duration": 1.0,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "WEIGHT_SHIFT_LEFT",
+      "duration": 1.6,
+      "status": "retargeted; visual cleanup review required"
+    },
+    {
+      "name": "WEIGHT_SHIFT_RIGHT",
+      "duration": 1.6,
+      "status": "retargeted; visual cleanup review required"
+    }
+  ],
+  "rig_rename_map": {
+    "root": "Hips",
+    "spine05": "Spine",
+    "spine01": "Chest",
+    "neck03": "Neck",
+    "head": "Head",
+    "jaw": "Jaw",
+    "upperarm01.L": "LeftUpperArm",
+    "lowerarm01.L": "LeftLowerArm",
+    "wrist.L": "LeftHand",
+    "upperleg01.L": "LeftUpperLeg",
+    "lowerleg01.L": "LeftLowerLeg",
+    "foot.L": "LeftFoot",
+    "eye.L": "LeftEye",
+    "upperarm01.R": "RightUpperArm",
+    "lowerarm01.R": "RightLowerArm",
+    "wrist.R": "RightHand",
+    "upperleg01.R": "RightUpperLeg",
+    "lowerleg01.R": "RightLowerLeg",
+    "foot.R": "RightFoot",
+    "eye.R": "RightEye"
+  },
+  "triangle_count": 57662,
+  "meshes": 31,
+  "silhouette_revision": "Adult midpoint from original foundation; moderate shoulders, original adult head size, 5% shorter arms, 20% smaller hands, slimmer legs and relaxed inward palms"
+}

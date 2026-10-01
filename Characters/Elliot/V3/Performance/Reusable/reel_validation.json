@@ -1,0 +1,142 @@
+{
+  "recordings": 18,
+  "categories": 13,
+  "primitives": 25,
+  "original_audio_unchanged": 121,
+  "voice_folder_files_unchanged": 123,
+  "reel_duration_seconds": 79.616,
+  "recorded_audio_checks": [
+    {
+      "id": "NOTICE_01",
+      "audio_start_seconds": 0.67338125,
+      "waveform_correlation": 0.9997277811371352,
+      "integer_sample_correlation": 0.9992068009356717,
+      "alignment_fraction_of_sample": 0.09999999999999998
+    },
+    {
+      "id": "NOTICE_04",
+      "audio_start_seconds": 3.80938125,
+      "waveform_correlation": 0.9993945261705638,
+      "integer_sample_correlation": 0.9985414008787601,
+      "alignment_fraction_of_sample": 0.09999999999999998
+    },
+    {
+      "id": "STARE_01",
+      "audio_start_seconds": 8.172046875,
+      "waveform_correlation": 0.9989579034498174,
+      "integer_sample_correlation": 0.9955777682315745,
+      "alignment_fraction_of_sample": -0.25
+    },
+    {
+      "id": "STARE_06",
+      "audio_start_seconds": 11.702715625000002,
+      "waveform_correlation": 0.9954403713167406,
+      "integer_sample_correlation": 0.9743942885056166,
+      "alignment_fraction_of_sample": 0.44999999999999984
+    },
+    {
+      "id": "CLOSE_01",
+      "audio_start_seconds": 15.6387125,
+      "waveform_correlation": 0.9979430451788036,
+      "integer_sample_correlation": 0.9805518230595162,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "CLOSE_02",
+      "audio_start_seconds": 18.7747125,
+      "waveform_correlation": 0.9965154969250226,
+      "integer_sample_correlation": 0.9762903472867999,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "FOLLOW_01",
+      "audio_start_seconds": 22.8387125,
+      "waveform_correlation": 0.9990546354281167,
+      "integer_sample_correlation": 0.9909428108680156,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "WARN_01",
+      "audio_start_seconds": 26.006712500000003,
+      "waveform_correlation": 0.9962745415280887,
+      "integer_sample_correlation": 0.9583383423288518,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "HIT_01",
+      "audio_start_seconds": 29.37738125,
+      "waveform_correlation": 0.9997949490008984,
+      "integer_sample_correlation": 0.9994095778019366,
+      "alignment_fraction_of_sample": 0.09999999999999998
+    },
+    {
+      "id": "IGNORE_01",
+      "audio_start_seconds": 33.676046875,
+      "waveform_correlation": 0.9994692855573049,
+      "integer_sample_correlation": 0.9965284951207244,
+      "alignment_fraction_of_sample": -0.25
+    },
+    {
+      "id": "LEAVE_01",
+      "audio_start_seconds": 37.37738125,
+      "waveform_correlation": 0.999265771610705,
+      "integer_sample_correlation": 0.9988299577638189,
+      "alignment_fraction_of_sample": 0.09999999999999998
+    },
+    {
+      "id": "INSULT_04",
+      "audio_start_seconds": 40.769384375,
+      "waveform_correlation": 0.9973940504843916,
+      "integer_sample_correlation": 0.9944391546804559,
+      "alignment_fraction_of_sample": 0.1499999999999999
+    },
+    {
+      "id": "SCARED_01",
+      "audio_start_seconds": 46.636050000000004,
+      "waveform_correlation": 0.9979940976687637,
+      "integer_sample_correlation": 0.9926562951843132,
+      "alignment_fraction_of_sample": -0.2
+    },
+    {
+      "id": "TELL_01",
+      "audio_start_seconds": 54.40138125,
+      "waveform_correlation": 0.9985689678978683,
+      "integer_sample_correlation": 0.9970713121860096,
+      "alignment_fraction_of_sample": 0.09999999999999998
+    },
+    {
+      "id": "TELL_04",
+      "audio_start_seconds": 64.31071250000001,
+      "waveform_correlation": 0.9965031883310961,
+      "integer_sample_correlation": 0.9784734479136109,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "MEMORY_01",
+      "audio_start_seconds": 69.00405,
+      "waveform_correlation": 0.9979308763029672,
+      "integer_sample_correlation": 0.9941129075321625,
+      "alignment_fraction_of_sample": -0.2
+    },
+    {
+      "id": "MEMORY_04",
+      "audio_start_seconds": 73.1747125,
+      "waveform_correlation": 0.9997689107304253,
+      "integer_sample_correlation": 0.9970048065114631,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    },
+    {
+      "id": "TRUST_02",
+      "audio_start_seconds": 76.4067125,
+      "waveform_correlation": 0.9986887621427689,
+      "integer_sample_correlation": 0.9880307073865029,
+      "alignment_fraction_of_sample": 0.3999999999999999
+    }
+  ],
+  "minimum_audio_correlation": 0.9954403713167406,
+  "maximum_phone_center_to_ear_m": 0.043533481657505,
+  "all_rendered_voice_playbacks_completed": true,
+  "render_failures": [],
+  "unreal_runtime_tested": false,
+  "independent_listening_review": false
+}

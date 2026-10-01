@@ -1,0 +1,335 @@
+{
+  "style": "Stylised rounded-polygon game character",
+  "anatomical_body": false,
+  "voice_integration": {
+    "scope": "reusable standalone performance gallery",
+    "recordings_connected": 18,
+    "autonomous_game_events": false,
+    "jev_integrated": false
+  },
+  "bones": 17,
+  "meshes": 31,
+  "triangle_count": 2576,
+  "facial_shapes": [
+    "Blink_Left",
+    "Blink_Right",
+    "Brow_Up",
+    "Brow_Down",
+    "Smile",
+    "Frown",
+    "Jaw_Open",
+    "Viseme_A",
+    "Viseme_E",
+    "Viseme_O",
+    "Viseme_MBP",
+    "Viseme_FV",
+    "Viseme_I",
+    "Viseme_U",
+    "Viseme_L",
+    "Viseme_WQ",
+    "Eye_Left",
+    "Eye_Right",
+    "Eye_Up",
+    "Eye_Down",
+    "Brow_Concern"
+  ],
+  "animations": [
+    {
+      "name": "ADJUST_SLEEVE",
+      "duration": 2.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "ANNOYED_REACTION",
+      "duration": 1.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "BACKPEDAL_SHORT",
+      "duration": 0.9333333333333333,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "BREAK_EYE_CONTACT",
+      "duration": 1.7,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "BUMP_RECOIL_LIGHT",
+      "duration": 0.8666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "BUMP_RECOIL_MEDIUM",
+      "duration": 0.8666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "CHECK_BEHIND",
+      "duration": 2.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "CLOSED_POSTURE",
+      "duration": 2.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "CONFUSED_REACTION",
+      "duration": 1.5,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "DEEP_BREATH",
+      "duration": 2.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "DOUBLE_TAKE",
+      "duration": 1.5,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "GLANCE_AWAY",
+      "duration": 1.6666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "HAND_UP_BOUNDARY",
+      "duration": 1.5,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "IDLE_NERVOUS_A",
+      "duration": 2.8,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "IDLE_NERVOUS_B",
+      "duration": 2.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "IDLE_NEUTRAL_A",
+      "duration": 3.6,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "IDLE_NEUTRAL_B",
+      "duration": 4.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "LONG_GLANCE",
+      "duration": 2.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "LOOK_AROUND",
+      "duration": 3.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "LOOK_AT_FLOOR",
+      "duration": 2.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "LOOK_BACK_AT_PLAYER",
+      "duration": 1.5,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "NERVOUS_IDLE",
+      "duration": 2.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "NERVOUS_WARNING",
+      "duration": 1.3666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "NOTICE_PLAYER",
+      "duration": 1.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_END_CALL",
+      "duration": 0.9,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_LISTEN_IDLE",
+      "duration": 3.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_LOOK_AT",
+      "duration": 2.4,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_LOWER_SLIGHTLY",
+      "duration": 0.7,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_NOTICE",
+      "duration": 1.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_PULL_OUT",
+      "duration": 1.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_PUT_AWAY",
+      "duration": 1.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_RAISE_TO_EAR",
+      "duration": 0.9666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_SCROLL",
+      "duration": 2.6,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "PHONE_TALK_IDLE",
+      "duration": 3.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "QUICK_GLANCE",
+      "duration": 0.7666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "REGAIN_BALANCE",
+      "duration": 1.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "RUB_HANDS",
+      "duration": 2.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "SCRATCH_NECK",
+      "duration": 2.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "SHOULDER_IMPACT_LEFT",
+      "duration": 0.9666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "SHOULDER_IMPACT_RIGHT",
+      "duration": 0.9666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "SIDE_STEP_LEFT",
+      "duration": 0.9,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "SIDE_STEP_RIGHT",
+      "duration": 0.9,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STEP_BACK",
+      "duration": 1.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STEP_BACK_FAST",
+      "duration": 0.6666666666666666,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STEP_BACK_SMALL",
+      "duration": 1.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STEP_BACK_STARTLED",
+      "duration": 0.5333333333333333,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STOP_AND_LOOK_BACK",
+      "duration": 1.6,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "STUMBLE_BACK",
+      "duration": 0.7666666666666667,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TOUCH_FACE",
+      "duration": 1.9,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TURN_AND_WALK_AWAY",
+      "duration": 1.2666666666666666,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TURN_AWAY_FROM_PLAYER",
+      "duration": 1.2,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TURN_LEFT",
+      "duration": 1.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TURN_RIGHT",
+      "duration": 1.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "TURN_TOWARD_PLAYER_PARTIAL",
+      "duration": 1.1,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "WALK_AWAY_NERVOUS",
+      "duration": 1.1333333333333333,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "WALK_BACKWARD",
+      "duration": 1.5333333333333334,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "WALK_FORWARD",
+      "duration": 1.0,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "WEIGHT_SHIFT_LEFT",
+      "duration": 1.6,
+      "status": "retargeted; visual review required"
+    },
+    {
+      "name": "WEIGHT_SHIFT_RIGHT",
+      "duration": 1.6,
+      "status": "retargeted; visual review required"
+    }
+  ],
+  "appearance_locked": true,
+  "phone_ear_pose_corrected": true
+}

@@ -1,0 +1,23 @@
+{
+  "id": "CLOSE_01",
+  "audio": "../../Voice/Bit close, mate.mp3",
+  "mouth_timing": "CLOSE_01.rhubarb.json",
+  "expression": "uncomfortable",
+  "body": [
+    {
+      "time": 0,
+      "clip": "HAND_UP_BOUNDARY"
+    },
+    {
+      "time": 1.25,
+      "clip": "STEP_BACK_SMALL"
+    },
+    {
+      "time": 2.25,
+      "clip": "IDLE_NERVOUS_A"
+    }
+  ],
+  "retreat_m": 0.16,
+  "eyes": "glance away and down",
+  "appearance_locked": true
+}

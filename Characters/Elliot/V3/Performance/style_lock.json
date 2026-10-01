@@ -1,0 +1,28 @@
+{
+  "approved_rest_sha256": "59f84978d6075291f42250b4b6860a6a600e7438313545e8d715f0f269518f25",
+  "unchanged_after_performance_controls": true,
+  "locked": "geometry, proportions, clothing, material assignments, bone rest transforms",
+  "facial_shapes": [
+    "Blink_Left",
+    "Blink_Right",
+    "Brow_Up",
+    "Brow_Down",
+    "Smile",
+    "Frown",
+    "Jaw_Open",
+    "Viseme_A",
+    "Viseme_E",
+    "Viseme_O",
+    "Viseme_MBP",
+    "Viseme_FV",
+    "Viseme_I",
+    "Viseme_U",
+    "Viseme_L",
+    "Viseme_WQ",
+    "Eye_Left",
+    "Eye_Right",
+    "Eye_Up",
+    "Eye_Down",
+    "Brow_Concern"
+  ]
+}

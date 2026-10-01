@@ -1,0 +1,428 @@
+{
+  "schema_version": 1,
+  "appearance_locked": true,
+  "voice_root": "res://performance/audio/",
+  "cue_root": "res://performance/cues/",
+  "crossfade_seconds": 0.22,
+  "primitives": {
+    "neutral_idle": {
+      "clip": "IDLE_NEUTRAL_A",
+      "layer": "base",
+      "loop": true
+    },
+    "awkward_idle": {
+      "clip": "IDLE_NERVOUS_B",
+      "layer": "base",
+      "loop": true
+    },
+    "nervous_idle": {
+      "clip": "IDLE_NERVOUS_A",
+      "layer": "base",
+      "loop": true
+    },
+    "hands_by_side": {
+      "clip": "IDLE_NEUTRAL_B",
+      "layer": "base",
+      "loop": true
+    },
+    "weight_shift": {
+      "clip": "WEIGHT_SHIFT_LEFT",
+      "layer": "base",
+      "loop": true
+    },
+    "glance_away": {
+      "clip": "GLANCE_AWAY",
+      "layer": "head",
+      "loop": false
+    },
+    "look_at_floor": {
+      "clip": "LOOK_AT_FLOOR",
+      "layer": "head",
+      "loop": false
+    },
+    "look_back": {
+      "clip": "LOOK_BACK_AT_PLAYER",
+      "layer": "head",
+      "loop": false
+    },
+    "double_take": {
+      "clip": "DOUBLE_TAKE",
+      "layer": "gesture",
+      "loop": false
+    },
+    "boundary_hand": {
+      "clip": "HAND_UP_BOUNDARY",
+      "layer": "gesture",
+      "loop": false
+    },
+    "annoyed": {
+      "clip": "ANNOYED_REACTION",
+      "layer": "gesture",
+      "loop": false
+    },
+    "startled_recoil": {
+      "clip": "BUMP_RECOIL_LIGHT",
+      "layer": "base",
+      "loop": false
+    },
+    "scared_posture": {
+      "clip": "CLOSED_POSTURE",
+      "layer": "gesture",
+      "loop": true
+    },
+    "step_back": {
+      "clip": "STEP_BACK",
+      "layer": "base",
+      "loop": false
+    },
+    "fast_step_back": {
+      "clip": "STEP_BACK_FAST",
+      "layer": "base",
+      "loop": false
+    },
+    "turn_away": {
+      "clip": "TURN_AWAY_FROM_PLAYER",
+      "layer": "base",
+      "loop": false
+    },
+    "normal_walk": {
+      "clip": "WALK_FORWARD",
+      "layer": "base",
+      "loop": true
+    },
+    "nervous_walk_away": {
+      "clip": "WALK_AWAY_NERVOUS",
+      "layer": "base",
+      "loop": true
+    },
+    "phone_pull_out": {
+      "clip": "PHONE_PULL_OUT",
+      "layer": "gesture",
+      "loop": false
+    },
+    "phone_look": {
+      "clip": "PHONE_LOOK_AT",
+      "layer": "gesture",
+      "loop": true
+    },
+    "phone_scroll": {
+      "clip": "PHONE_SCROLL",
+      "layer": "gesture",
+      "loop": true
+    },
+    "phone_raise": {
+      "clip": "PHONE_RAISE_TO_EAR",
+      "layer": "gesture",
+      "loop": false
+    },
+    "phone_talk": {
+      "clip": "PHONE_TALK_IDLE",
+      "layer": "gesture",
+      "loop": true
+    },
+    "phone_lower": {
+      "clip": "PHONE_END_CALL",
+      "layer": "gesture",
+      "loop": false
+    },
+    "phone_put_away": {
+      "clip": "PHONE_PUT_AWAY",
+      "layer": "gesture",
+      "loop": false
+    }
+  },
+  "expressions": {
+    "neutral": {},
+    "nervous": {
+      "Brow_Concern": 0.75,
+      "Frown": 0.1
+    },
+    "uncomfortable": {
+      "Brow_Concern": 0.85,
+      "Brow_Down": 0.15,
+      "Frown": 0.12
+    },
+    "uneasy_recognition": {
+      "Brow_Up": 0.32,
+      "Brow_Concern": 0.55
+    },
+    "frightened": {
+      "Brow_Up": 0.75,
+      "Brow_Concern": 0.75,
+      "Frown": 0.14
+    },
+    "awkward_insult": {
+      "Brow_Down": 0.4,
+      "Frown": 0.14
+    },
+    "warm": {
+      "Brow_Up": 0.16,
+      "Smile": 0.55
+    }
+  },
+  "mouth_mapping": {
+    "A": "Viseme_MBP",
+    "B": "Viseme_I",
+    "C": "Viseme_E",
+    "D": "Viseme_A",
+    "E": "Viseme_O",
+    "F": "Viseme_U",
+    "G": "Viseme_FV",
+    "H": "Viseme_L",
+    "X": ""
+  },
+  "lines": [
+    {
+      "id": "NOTICE_01",
+      "category": "noticing",
+      "recording": "Oh-Hey.mp3",
+      "audio": "NOTICE_01.mp3",
+      "cues": "NOTICE_01.json",
+      "duration": 1.17,
+      "face": "neutral",
+      "eyes": "look_back",
+      "gesture": "none",
+      "action": "neutral_idle",
+      "prop": "none",
+      "source_sha256": "318adc37eb3730f361c21b43bcfe2dbf8acba20833f547a7de421ed449a1c5a6"
+    },
+    {
+      "id": "NOTICE_04",
+      "category": "noticing",
+      "recording": "Oh- sorry, didn't see you there.mp3",
+      "audio": "NOTICE_04.mp3",
+      "cues": "NOTICE_04.json",
+      "duration": 2.48,
+      "face": "uneasy_recognition",
+      "eyes": "look_back",
+      "gesture": "double_take",
+      "action": "awkward_idle",
+      "prop": "none",
+      "source_sha256": "1942a5cb952a19586ebd548a7266192c47223a15f990c74123c5fe21ef34f15e"
+    },
+    {
+      "id": "STARE_01",
+      "category": "staring",
+      "recording": "Can I help you.mp3",
+      "audio": "STARE_01.mp3",
+      "cues": "STARE_01.json",
+      "duration": 1.61,
+      "face": "nervous",
+      "eyes": "glance_away",
+      "gesture": "none",
+      "action": "awkward_idle",
+      "prop": "none",
+      "source_sha256": "ee1a134eebca3958c20b92d63096c01db4c7cc395d570096b8cd29850f1d40d9"
+    },
+    {
+      "id": "STARE_06",
+      "category": "staring",
+      "recording": "Please stop staring, it's weird.mp3",
+      "audio": "STARE_06.mp3",
+      "cues": "STARE_06.json",
+      "duration": 2.03,
+      "face": "uncomfortable",
+      "eyes": "look_at_floor",
+      "gesture": "annoyed",
+      "action": "nervous_idle",
+      "prop": "none",
+      "source_sha256": "6e52de35ecb4e80b3da17afb33c4087f5eaf17950c5ca0303516604f84494e67"
+    },
+    {
+      "id": "CLOSE_01",
+      "category": "too_close",
+      "recording": "Bit close, mate.mp3",
+      "audio": "CLOSE_01.mp3",
+      "cues": "CLOSE_01.json",
+      "duration": 1.2,
+      "face": "nervous",
+      "eyes": "glance_away",
+      "gesture": "boundary_hand",
+      "action": "step_back",
+      "prop": "none",
+      "source_sha256": "56cd1d52ead8a7477edd2c416cfbb9d7a7b9b67d20af3620fe9f6de870646940"
+    },
+    {
+      "id": "CLOSE_02",
+      "category": "too_close",
+      "recording": "Could you just- back up a bit.mp3",
+      "audio": "CLOSE_02.mp3",
+      "cues": "CLOSE_02.json",
+      "duration": 2.16,
+      "face": "uncomfortable",
+      "eyes": "glance_away",
+      "gesture": "boundary_hand",
+      "action": "step_back",
+      "prop": "none",
+      "source_sha256": "41014ede582e25936e6a4211564fe08968e21487953006b058a68dfaba89219e"
+    },
+    {
+      "id": "FOLLOW_01",
+      "category": "followed",
+      "recording": "Why are you following me.mp3",
+      "audio": "FOLLOW_01.mp3",
+      "cues": "FOLLOW_01.json",
+      "duration": 1.28,
+      "face": "uneasy_recognition",
+      "eyes": "double_take",
+      "gesture": "double_take",
+      "action": "nervous_idle",
+      "prop": "none",
+      "source_sha256": "eb0bf15e4f40b524d2bcb00e1d01e9b66b9680812d61051b777d6a92a78a99cb"
+    },
+    {
+      "id": "WARN_01",
+      "category": "warning",
+      "recording": "Get away from me.mp3",
+      "audio": "WARN_01.mp3",
+      "cues": "WARN_01.json",
+      "duration": 1.46,
+      "face": "frightened",
+      "eyes": "watch_player",
+      "gesture": "boundary_hand",
+      "action": "fast_step_back",
+      "prop": "none",
+      "source_sha256": "0d15e4f95773df504d8f31f3c54a5e3cd60f37b450361f75bf6454cb88b1629f"
+    },
+    {
+      "id": "HIT_01",
+      "category": "being_hit",
+      "recording": "What was that for.mp3",
+      "audio": "HIT_01.mp3",
+      "cues": "HIT_01.json",
+      "duration": 1.14,
+      "face": "frightened",
+      "eyes": "look_back",
+      "gesture": "startled_recoil",
+      "action": "startled_recoil",
+      "prop": "none",
+      "source_sha256": "0596ac590487f9b66e51c0e5180d7e0d5958a6941896dfe5b69ad982a4bb8be9"
+    },
+    {
+      "id": "IGNORE_01",
+      "category": "ignoring",
+      "recording": "Anyway.mp3",
+      "audio": "IGNORE_01.mp3",
+      "cues": "IGNORE_01.json",
+      "duration": 1.01,
+      "face": "neutral",
+      "eyes": "phone_screen",
+      "gesture": "none",
+      "action": "neutral_idle",
+      "prop": "check_phone",
+      "source_sha256": "ceeb5e20f718f5f8c9a2d0bb304d15fbbade320c0a20ebbc0c8c1e8b2152ec44"
+    },
+    {
+      "id": "LEAVE_01",
+      "category": "walking_away",
+      "recording": "I'm going to go.mp3",
+      "audio": "LEAVE_01.mp3",
+      "cues": "LEAVE_01.json",
+      "duration": 1.48,
+      "face": "nervous",
+      "eyes": "glance_away",
+      "gesture": "none",
+      "action": "nervous_walk_away",
+      "prop": "none",
+      "source_sha256": "a00ffdc49fc14cddf72d3e1bf11ce991a341671cd583c07978739cdaa3eea731"
+    },
+    {
+      "id": "INSULT_04",
+      "category": "insulting_back",
+      "recording": "Yeah Well your shoes are stupid.mp3",
+      "audio": "INSULT_04.mp3",
+      "cues": "INSULT_04.json",
+      "duration": 3.97,
+      "face": "awkward_insult",
+      "eyes": "regret_glance",
+      "gesture": "annoyed",
+      "action": "awkward_idle",
+      "prop": "none",
+      "source_sha256": "bbe4589ae30f36a1f30f99582b62700d804815e037d3cff3ae1587a9492dd44b"
+    },
+    {
+      "id": "SCARED_01",
+      "category": "getting_scared",
+      "recording": "Okay, okay- I don't want any trouble.mp3",
+      "audio": "SCARED_01.mp3",
+      "cues": "SCARED_01.json",
+      "duration": 3.29,
+      "face": "frightened",
+      "eyes": "watch_player",
+      "gesture": "scared_posture",
+      "action": "step_back",
+      "prop": "none",
+      "source_sha256": "bc4629f0bcd5a8176ae4498fed09893682604e76872cdaf692a0f4a2ad541ea8"
+    },
+    {
+      "id": "TELL_01",
+      "category": "using_phone",
+      "recording": "Hey- yeah, it's me There's this guy, he won't leave me alone.mp3",
+      "audio": "TELL_01.mp3",
+      "cues": "TELL_01.json",
+      "duration": 3.91,
+      "face": "nervous",
+      "eyes": "phone_call",
+      "gesture": "none",
+      "action": "weight_shift",
+      "prop": "phone_call",
+      "source_sha256": "8734d0e301bcf42809852c15ae7df31fc7c064d21736135b63d19d5782609764"
+    },
+    {
+      "id": "TELL_04",
+      "category": "using_phone",
+      "recording": "Can you come get me, please.mp3",
+      "audio": "TELL_04.mp3",
+      "cues": "TELL_04.json",
+      "duration": 1.3,
+      "face": "frightened",
+      "eyes": "phone_call",
+      "gesture": "none",
+      "action": "nervous_idle",
+      "prop": "phone_call",
+      "source_sha256": "d3b1375d0a2d5597792b30f9b8bdc91d00702e5ca24a5e545089fd601ccb43c7"
+    },
+    {
+      "id": "MEMORY_01",
+      "category": "remembering",
+      "recording": "Oh It's you again.mp3",
+      "audio": "MEMORY_01.mp3",
+      "cues": "MEMORY_01.json",
+      "duration": 2.27,
+      "face": "uneasy_recognition",
+      "eyes": "double_take",
+      "gesture": "double_take",
+      "action": "awkward_idle",
+      "prop": "none",
+      "source_sha256": "b089876822798378ce1e738eec8fa5f9295080522604a4d073a7c38feaf1624e"
+    },
+    {
+      "id": "MEMORY_04",
+      "category": "remembering",
+      "recording": "I remember you.mp3",
+      "audio": "MEMORY_04.mp3",
+      "cues": "MEMORY_04.json",
+      "duration": 1.33,
+      "face": "uneasy_recognition",
+      "eyes": "watch_player",
+      "gesture": "none",
+      "action": "hands_by_side",
+      "prop": "none",
+      "source_sha256": "ca119563309f2570819f349f07ca3fed45ed8ee32fd819f8fff9cf3a64819232"
+    },
+    {
+      "id": "TRUST_02",
+      "category": "trusting",
+      "recording": "You're alright, actually.mp3",
+      "audio": "TRUST_02.mp3",
+      "cues": "TRUST_02.json",
+      "duration": 1.43,
+      "face": "warm",
+      "eyes": "look_back",
+      "gesture": "none",
+      "action": "neutral_idle",
+      "prop": "none",
+      "source_sha256": "dbaf981455bc19f624d3f0739bef379c1ef0bef515a47e5d51c41391f0d7ce1f"
+    }
+  ]
+}

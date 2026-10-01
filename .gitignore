@@ -1,0 +1,34 @@
+﻿# Python
+__pycache__/
+*.pyc
+
+# Godot generated (import cache, shader cache) - .import/.uid files ARE tracked
+.godot/
+
+# Blender autosave/backup
+*.blend1
+*.blend2
+*.blend@
+
+# Generated render output / capture recordings (reproducible)
+/build/
+*.avi
+
+# Logs
+*.log
+
+# Third-party download archive (extracted copy is tracked)
+Characters/Elliot/V3/Performance/tools/rhubarb.zip
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+
+# OS / editor temp
+Thumbs.db
+desktop.ini
+.DS_Store
+*.tmp
+*~

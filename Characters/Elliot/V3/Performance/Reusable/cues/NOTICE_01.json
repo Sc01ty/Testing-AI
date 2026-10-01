@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "soundFile": "D:\\Video Projects\\NPC Package\\Characters\\Elliot\\V3\\Performance\\Reusable\\audio\\NOTICE_01.wav",
+    "duration": 1.17
+  },
+  "mouthCues": [
+    { "start": 0.00, "end": 0.12, "value": "X" },
+    { "start": 0.12, "end": 0.33, "value": "E" },
+    { "start": 0.33, "end": 0.75, "value": "F" },
+    { "start": 0.75, "end": 1.17, "value": "B" }
+  ]
+}

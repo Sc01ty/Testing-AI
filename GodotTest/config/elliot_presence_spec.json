@@ -1,0 +1,37 @@
+{
+  "profile": {
+    "baseline_comfort": 0.72,
+    "baseline_alertness": 0.08,
+    "baseline_irritation": 0.03,
+    "baseline_familiarity": 0.05,
+    "social_confidence": 0.18,
+    "eye_contact_tolerance_s": 1.25,
+    "personal_space_sensitivity": 0.82
+  },
+  "latency": {
+    "notice_min_s": 0.22,
+    "notice_max_s": 0.58,
+    "stare_response_min_s": 0.18,
+    "stare_response_max_s": 0.42,
+    "look_back_min_s": 2.4,
+    "look_back_max_s": 4.2,
+    "micro_behaviour_min_s": 2.8,
+    "micro_behaviour_max_s": 5.8
+  },
+  "procedural_limits": {
+    "head_yaw_degrees": 28.0,
+    "head_pitch_degrees": 16.0,
+    "chest_yaw_degrees": 8.0,
+    "lean_degrees": 4.0,
+    "weight_shift_degrees": 1.4,
+    "arm_fidget_degrees": 2.2,
+    "breathing_degrees": 0.45
+  },
+  "reposition": {
+    "step_distance_m": 0.28,
+    "step_duration_s": 0.72,
+    "collision_margin_m": 0.12,
+    "candidate_angles_degrees": [0.0, -35.0, 35.0, -70.0, 70.0]
+  }
+}
+

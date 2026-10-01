@@ -1,0 +1,22 @@
+{
+	"appearance_locked": true,
+	"audio_started": true,
+	"body_clips": [
+		"HAND_UP_BOUNDARY",
+		"STEP_BACK_SMALL",
+		"IDLE_NERVOUS_A"
+	],
+	"duration": 1.2,
+	"facial_controls": 21,
+	"jev_connected": false,
+	"neutral_after_speech": true,
+	"observed_mouth_cues": [
+		"A",
+		"B",
+		"E",
+		"F",
+		"D",
+		"X"
+	],
+	"original_audio": "D:/Video Projects/NPC Package/Characters/Elliot/Voice/Bit close, mate.mp3"
+}
