@@ -7,7 +7,18 @@ import type { SynthRecipe } from './synthRecipes'
  *   { source: { kind: 'file', url: 'audio/ui/confirm.wav', gain: 0.6 } }
  * (paths are relative to /public).
  */
-export type UiSoundId = 'hover' | 'move' | 'confirm' | 'back' | 'transition' | 'toggle' | 'error' | 'enter'
+export type UiSoundId =
+  | 'hover'
+  | 'move'
+  | 'confirm'
+  | 'back'
+  | 'transition'
+  | 'toggle'
+  | 'error'
+  | 'enter'
+  | 'impact'
+  | 'swish'
+  | 'impactBig'
 
 export type SoundSource =
   | { kind: 'synth'; recipe: SynthRecipe; gain?: number }
@@ -28,7 +39,18 @@ export const UI_SOUNDS: Record<UiSoundId, SoundDef> = {
   toggle: { source: { kind: 'synth', recipe: synth.toggle }, minIntervalMs: 40 },
   error: { source: { kind: 'synth', recipe: synth.error }, minIntervalMs: 200 },
   enter: { source: { kind: 'synth', recipe: synth.enter }, minIntervalMs: 500 },
+  // brand reveal
+  impact: { source: { kind: 'synth', recipe: synth.impact }, minIntervalMs: 300 },
+  swish: { source: { kind: 'synth', recipe: synth.swish }, minIntervalMs: 200 },
+  impactBig: { source: { kind: 'synth', recipe: synth.impactBig }, minIntervalMs: 500 },
 }
+
+/**
+ * The menu theme's first big hit is ~4.9s in. The intro starts the track at
+ * MENU_THEME_START so that hit lands as "RANKED" slams in.
+ */
+export const MENU_THEME_START = 2.6
+export const MENU_THEME_HIT = 4.88
 
 export type MusicTrackId = 'menu'
 

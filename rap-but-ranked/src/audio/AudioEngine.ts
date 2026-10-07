@@ -23,8 +23,12 @@ class AudioEngine {
   private musicBus!: GainNode
   private musicFilter!: BiquadFilterNode
   private musicMood!: GainNode
-  private music: { id: MusicTrackId; el: HTMLAudioElement; gain: GainNode } | null = null
+  private music: { id: MusicTrackId; el: HTMLAudioElement; gain: GainNode; analyser: AnalyserNode } | null = null
   private wantedMusic: MusicTrackId | null = null
+  private wantedOffset = 0
+  /** Elements created ahead of time so the first play doesn't wait on the network. */
+  private preloaded = new Map<MusicTrackId, HTMLAudioElement>()
+  private freq: Uint8Array<ArrayBuffer> | null = null
   private mood: MusicMood = 'menu'
   private buffers = new Map<string, Promise<AudioBuffer | null>>()
   private lastPlayed = new Map<UiSoundId, number>()
@@ -107,6 +111,48 @@ class AudioEngine {
     this.syncMusic()
   }
 
+  /**
+   * Start downloading a track without playing it (downloads aren't blocked by
+   * autoplay rules). Call once the page has painted so it never delays first load.
+   */
+  preloadMusic(id: MusicTrackId) {
+    if (this.preloaded.has(id) || this.music?.id === id || typeof Audio === 'undefined') return
+    const el = new Audio()
+    el.preload = 'auto'
+    el.loop = true
+    el.src = import.meta.env.BASE_URL + MUSIC_TRACKS[id].url
+    this.preloaded.set(id, el)
+  }
+
+  /** Where the first play of a track should begin (seconds). Ignored once it's playing. */
+  setMusicStartOffset(seconds: number) {
+    this.wantedOffset = seconds
+  }
+
+  /** Playback position of the current track, or null if nothing is audibly running. */
+  getMusicTime(id: MusicTrackId): number | null {
+    const m = this.music
+    if (!m || m.id !== id || m.el.paused || m.el.readyState < 3) return null
+    return m.el.currentTime
+  }
+
+  /**
+   * Rough 0..1 loudness of the music's low end, for visuals that should move
+   * with the track. Not beat detection — just "how much bass right now".
+   * Measured before the volume controls so visuals don't die at low volume.
+   */
+  getMusicEnergy(): number | null {
+    const m = this.music
+    if (!m || m.el.paused) return null
+    const a = m.analyser
+    if (!this.freq || this.freq.length !== a.frequencyBinCount) this.freq = new Uint8Array(a.frequencyBinCount)
+    a.getByteFrequencyData(this.freq)
+    // bins are sampleRate / fftSize wide (~43Hz at 44.1k / 1024): take ~40–260Hz
+    let sum = 0
+    for (let i = 1; i <= 6; i++) sum += this.freq[i]
+    return sum / (6 * 255)
+  }
+
   /** Muffle the menu theme behind sub-pages instead of cutting it. */
   setMusicMood(mood: MusicMood) {
     this.mood = mood
@@ -129,21 +175,38 @@ class AudioEngine {
   private startMusic(id: MusicTrackId) {
     const ctx = this.ctx!
     const track = MUSIC_TRACKS[id]
-    const el = new Audio()
-    el.src = import.meta.env.BASE_URL + track.url
-    el.loop = true
-    el.preload = 'auto'
+    let el = this.preloaded.get(id)
+    this.preloaded.delete(id)
+    if (!el) {
+      el = new Audio()
+      el.src = import.meta.env.BASE_URL + track.url
+      el.loop = true
+      el.preload = 'auto'
+    }
     const gain = ctx.createGain()
     gain.gain.value = 0.0001
-    ctx.createMediaElementSource(el).connect(gain).connect(this.musicFilter)
-    this.music = { id, el, gain }
+    const analyser = ctx.createAnalyser()
+    analyser.fftSize = 1024
+    analyser.smoothingTimeConstant = 0.55
+    const source = ctx.createMediaElementSource(el)
+    source.connect(gain).connect(this.musicFilter)
+    source.connect(analyser)
+    this.music = { id, el, gain, analyser }
+    if (this.wantedOffset > 0) {
+      const offset = this.wantedOffset
+      if (el.readyState >= 1) el.currentTime = offset
+      else el.addEventListener('loadedmetadata', () => (el.currentTime = offset), { once: true })
+    }
+    const fadeIn = () => {
+      const t = ctx.currentTime
+      gain.gain.cancelScheduledValues(t)
+      gain.gain.setValueAtTime(0.0001, t)
+      gain.gain.exponentialRampToValueAtTime(track.gain, t + 1.4)
+    }
+    // ramp from the moment sound actually starts, not from when play() was asked
+    el.addEventListener('playing', fadeIn, { once: true })
     void el
       .play()
-      .then(() => {
-        const t = ctx.currentTime
-        gain.gain.setValueAtTime(0.0001, t)
-        gain.gain.exponentialRampToValueAtTime(track.gain, t + 2.5)
-      })
       .catch(() => {
         /* blocked or failed to load — stay silent, never break the UI */
         if (this.music?.el === el) this.music = null

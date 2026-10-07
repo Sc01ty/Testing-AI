@@ -26,6 +26,7 @@
   top: var(--glow-y);
   translate: -50% -50%;
   background: radial-gradient(circle, rgb(91 43 192 / 0.32) 0%, rgb(63 29 125 / 0.16) 35%, transparent 68%);
+  opacity: calc(0.78 + var(--energy, 0.35) * 0.3);
   transition:
     left 1.4s var(--ease-out),
     top 1.4s var(--ease-out),

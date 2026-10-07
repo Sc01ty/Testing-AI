@@ -8,23 +8,45 @@
   pointer-events: none;
 }
 
+.backdrop {
+  --energy: 0.35;
+}
+
+/* Motifs ride a vertical rail in menu order: --pos is -1 (above), 0, or 1 (below) */
 .backdrop__motif {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   opacity: 0;
-  transform: translate3d(28px, 0, 0) scale(0.985);
+  transform: translate3d(0, calc(var(--pos, 1) * 9dvh), 0) scale(0.94);
+  filter: blur(6px);
   transition:
-    opacity 520ms var(--ease-out),
-    transform 900ms var(--ease-out);
+    opacity 300ms var(--ease-out),
+    transform 700ms var(--ease-out),
+    filter 400ms var(--ease-out);
 }
 .backdrop__motif[data-on] {
   opacity: 1;
   transform: none;
+  filter: none;
+  transition:
+    opacity 420ms var(--ease-out) 60ms,
+    transform 760ms var(--ease-out),
+    filter 420ms var(--ease-out);
 }
 
 /* PLAY — rank */
+.backdrop__rank-glow {
+  position: absolute;
+  width: min(60dvh, 38vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -2vw 4dvh;
+  background: radial-gradient(circle, rgb(var(--glow) / 0.28), transparent 65%);
+  opacity: calc(0.25 + var(--energy) * 0.75);
+  scale: calc(0.92 + var(--energy) * 0.1);
+}
 .backdrop__rank-s {
   font-family: var(--font-display);
   font-weight: 800;
@@ -75,6 +97,7 @@
 .backdrop__bars span {
   flex: 1;
   height: calc(var(--h) * 100%);
+  scale: 1 calc(0.55 + var(--energy) * 0.75 * var(--w));
   border-radius: 3px;
   background: linear-gradient(180deg, rgb(187 154 255 / 0.35), rgb(91 43 192 / 0.2));
   transform-origin: center;
@@ -89,6 +112,7 @@
   }
 }
 .backdrop__playhead {
+  opacity: calc(0.45 + var(--energy) * 0.55);
   position: absolute;
   top: -8%;
   bottom: -8%;
@@ -151,6 +175,7 @@
 
 /* SETTINGS — dial */
 .backdrop__dial svg {
+  scale: calc(0.98 + var(--energy) * 0.04);
   width: min(62dvh, 40vw);
   translate: 4vw 0;
   overflow: visible;

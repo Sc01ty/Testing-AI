@@ -41,12 +41,14 @@
 .sound-toggle__bars[data-on] i {
   background: var(--purple-300);
   height: 12px;
-  animation: eq 1s var(--ease-inout) infinite alternate;
+  /* follows the music; the per-bar animation keeps it from moving in lockstep */
+  scale: 1 calc(0.3 + var(--energy, 0.4) * var(--w));
+  animation: eq 0.9s var(--ease-inout) infinite alternate;
   animation-delay: calc(var(--b) * -0.27s);
 }
 @keyframes eq {
   from {
-    transform: scaleY(0.3);
+    transform: scaleY(0.6);
   }
   to {
     transform: scaleY(1);

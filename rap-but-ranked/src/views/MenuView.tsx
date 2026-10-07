@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { audio } from '../audio/AudioEngine'
+import { MENU_THEME_HIT, MENU_THEME_START } from '../audio/sounds'
 import { Logo } from '../components/brand/Logo'
 import { MenuBackdrop } from '../components/menu/MenuBackdrop'
 import { router } from '../app/router'
 import { MENU_ROUTES, type RouteId } from '../app/routes'
-import { INTRO_WAITS_FOR_INPUT } from '../app/config'
+import { CLICK_TO_ENTER } from '../app/config'
 import { isReducedMotion } from '../motion/motion'
 import './MenuView.css'
 
 /**
- * Title + main menu in one screen so the brand reveal can flow straight
- * into the menu without a cut:
+ * Title + main menu in one screen so the brand reveal flows straight into
+ * the menu without a cut:
  *
- *   pre → rap ("RAP" rises) → reveal (BUT RANKED unfolds) → gate → menu
+ *   enter (click to enter) → pre → rap → reveal → settle → menu
  *
- * The gate ("press any key") exists because browsers only allow sound after
- * a user gesture; pressing it is the moment audio + music come in.
+ * Browsers only allow sound after a gesture, so the very first screen is a
+ * minimal "click to enter". That click starts the theme, and the reveal is
+ * timed against the music's own clock so "RANKED" lands on the track's hit.
  */
-type Phase = 'pre' | 'rap' | 'reveal' | 'gate' | 'menu'
+type Phase = 'enter' | 'pre' | 'rap' | 'reveal' | 'settle' | 'menu'
 
 let introDone = false
 /** Lets Settings ("Replay intro") request the reveal again. */
@@ -32,8 +34,24 @@ const GLOW_POSITIONS: [string, string][] = [
   ['82%', '80%'],
 ]
 
+/** Intro timings (ms). RANKED's letters visibly land ~LAND_AFTER_REVEAL after the reveal starts. */
+const T = {
+  rapAt: 280,
+  rapImpact: 230, // after rap starts, as the letters hit the floor
+  earliestReveal: 1450,
+  revealFallback: 1850,
+  revealCap: 2900,
+  landAfterReveal: 400,
+  settleAfterReveal: 1050,
+  menuAfterSettle: 1000,
+}
+
+const isTouch = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
 export function MenuView({ from }: { from: RouteId | null }) {
-  const [phase, setPhase] = useState<Phase>(() => (introDone ? 'menu' : 'pre'))
+  const [phase, setPhase] = useState<Phase>(() =>
+    introDone ? 'menu' : CLICK_TO_ENTER && !audio.isUnlocked ? 'enter' : 'pre',
+  )
   const initialIndex = Math.max(0, MENU_ROUTES.findIndex((r) => r.id === from))
   const [active, setActive] = useState(initialIndex)
   const [launching, setLaunching] = useState<RouteId | null>(null)
@@ -41,10 +59,11 @@ export function MenuView({ from }: { from: RouteId | null }) {
   const logoRef = useRef<HTMLDivElement>(null)
   const menuShownAt = useRef(introDone ? 0 : Infinity)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const cancelIntro = useRef<() => void>(() => {})
 
   // Centre "RAP" on its own for the first beat of the intro
   useLayoutEffect(() => {
-    if (phase !== 'pre') return
+    if (phase !== 'enter' && phase !== 'pre') return
     const wrap = logoRef.current
     if (!wrap) return
     const measure = () => {
@@ -58,60 +77,134 @@ export function MenuView({ from }: { from: RouteId | null }) {
     void document.fonts?.ready.then(measure)
   }, [phase])
 
-  // Intro timeline — scheduled once on mount (not per phase, or each step would cancel the next)
-  useEffect(() => {
-    if (introDone) return
-    let cancelled = false
-    const timers: number[] = []
-    const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(() => !cancelled && fn(), ms))
-    const afterReveal = () => setPhase((p) => (p === 'menu' ? p : INTRO_WAITS_FOR_INPUT ? 'gate' : 'menu'))
-    const start = () => {
-      if (cancelled) return
-      if (isReducedMotion()) {
-        at(50, afterReveal)
-        return
-      }
-      at(120, () => setPhase((p) => (p === 'pre' ? 'rap' : p)))
-      at(1350, () => setPhase((p) => (p === 'rap' ? 'reveal' : p)))
-      at(2650, afterReveal)
-    }
-    // don't start the reveal with fallback fonts; cap the wait so first paint is never held hostage
-    Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1200))]).then(start)
-    return () => {
-      cancelled = true
-      timers.forEach(clearTimeout)
-    }
-  }, [])
+  // On the enter screen: line the theme up with the reveal and start fetching it quietly
+  useLayoutEffect(() => {
+    if (phase !== 'enter') return
+    audio.setMusicStartOffset(MENU_THEME_START)
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 200))
+    idle(() => audio.preloadMusic('menu'))
+  }, [phase])
 
-  const enterMenu = useCallback(() => {
-    audio.unlock()
-    audio.setMusicMood('menu')
-    audio.play('enter')
+  const finishIntro = useCallback(() => {
+    cancelIntro.current()
     introDone = true
     menuShownAt.current = performance.now()
     setPhase('menu')
   }, [])
 
-  useEffect(() => {
-    if (phase === 'menu') introDone = true
-  }, [phase])
+  /**
+   * Runs the reveal. With `syncToMusic`, the reveal waits for the theme to
+   * reach its first hit; otherwise (music off, replay, slow load) it falls
+   * back to fixed timings so the intro never stalls.
+   */
+  const runIntro = useCallback(
+    (syncToMusic: boolean) => {
+      cancelIntro.current()
+      let cancelled = false
+      const timers: number[] = []
+      let raf = 0
+      const at = (ms: number, fn: () => void) => timers.push(window.setTimeout(() => !cancelled && fn(), ms))
+      cancelIntro.current = () => {
+        cancelled = true
+        timers.forEach(clearTimeout)
+        cancelAnimationFrame(raf)
+      }
 
-  // Any key / click during the intro: skip straight into the menu
+      if (isReducedMotion()) {
+        at(60, finishIntro)
+        return
+      }
+
+      const reveal = () => {
+        setPhase('reveal')
+        at(90, () => audio.play('swish'))
+        at(T.landAfterReveal, () => audio.play('impactBig'))
+        at(T.settleAfterReveal, () => setPhase('settle'))
+        at(T.settleAfterReveal + T.menuAfterSettle, () => {
+          audio.play('transition')
+          finishIntro()
+        })
+      }
+
+      const begin = () => {
+        if (cancelled) return
+        const t0 = performance.now()
+        at(T.rapAt, () => setPhase('rap'))
+        at(T.rapAt + T.rapImpact, () => audio.play('impact'))
+        const revealAtMusicTime = MENU_THEME_HIT - T.landAfterReveal / 1000
+        const tick = () => {
+          if (cancelled) return
+          const elapsed = performance.now() - t0
+          const mt = syncToMusic ? audio.getMusicTime('menu') : null
+          let due: boolean
+          if (elapsed >= T.revealCap) due = true
+          else if (elapsed < T.earliestReveal) due = false
+          else if (!syncToMusic) due = elapsed >= T.revealFallback
+          // music running: wait for its hit. Still buffering: give it a little longer.
+          else due = mt !== null ? mt >= revealAtMusicTime : elapsed >= T.revealFallback + 500
+          if (due) reveal()
+          else raf = requestAnimationFrame(tick)
+        }
+        raf = requestAnimationFrame(tick)
+      }
+
+      setPhase('pre')
+      // don't start with fallback fonts; cap the wait so nothing is held hostage
+      void Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 900))]).then(begin)
+    },
+    [finishIntro],
+  )
+
+  // No enter screen (replay, already-unlocked audio, or CLICK_TO_ENTER off): start right away
   useEffect(() => {
-    if (phase === 'menu') return
+    if (introDone || phase !== 'pre') return
+    runIntro(false)
+    return () => cancelIntro.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const enter = useCallback(() => {
+    if (phase !== 'enter') return
+    audio.setMusicStartOffset(MENU_THEME_START)
+    audio.unlock()
+    audio.setMusicMood('menu')
+    runIntro(true)
+  }, [phase, runIntro])
+
+  useEffect(() => () => cancelIntro.current(), [])
+
+  // Enter screen: first click / key starts everything
+  useEffect(() => {
+    if (phase !== 'enter') return
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
       e.preventDefault()
-      enterMenu()
+      enter()
     }
-    const onPointer = () => enterMenu()
     window.addEventListener('keydown', onKey)
-    window.addEventListener('pointerdown', onPointer)
+    window.addEventListener('pointerdown', enter)
     return () => {
       window.removeEventListener('keydown', onKey)
-      window.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('pointerdown', enter)
     }
-  }, [phase, enterMenu])
+  }, [phase, enter])
+
+  // During the reveal, any key / click skips straight into the menu
+  useEffect(() => {
+    if (phase !== 'rap' && phase !== 'reveal' && phase !== 'settle') return
+    const skip = (e: Event) => {
+      if (e instanceof KeyboardEvent && (e.repeat || e.metaKey || e.ctrlKey || e.altKey)) return
+      e.preventDefault()
+      audio.play('transition')
+      finishIntro()
+    }
+    window.addEventListener('keydown', skip)
+    window.addEventListener('pointerdown', skip)
+    return () => {
+      window.removeEventListener('keydown', skip)
+      window.removeEventListener('pointerdown', skip)
+    }
+  }, [phase, finishIntro])
 
   const launch = useCallback(
     (id: RouteId) => {
@@ -189,9 +282,12 @@ export function MenuView({ from }: { from: RouteId | null }) {
         <span>Build the song</span>
       </p>
 
-      <button className="title__gate" onClick={enterMenu} tabIndex={phase === 'gate' ? 0 : -1} aria-hidden={phase !== 'gate'}>
-        Press any key
-      </button>
+      <div className="title__enter" aria-hidden={phase !== 'enter'}>
+        <button className="title__enter-btn" tabIndex={phase === 'enter' ? 0 : -1}>
+          {isTouch() ? 'Tap to enter' : 'Click to enter'}
+        </button>
+        <span className="title__enter-hint">Sound on · headphones recommended</span>
+      </div>
 
       <nav className="menu" aria-label="Main menu" aria-hidden={!inMenu}>
         <ul className="menu__list">

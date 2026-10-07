@@ -8,11 +8,18 @@ The player writes and performs their own lyrics. The app sets challenges, judges
 
 ## Run it
 
-```bash
+First time (Windows Command Prompt, macOS or Linux terminal):
+
+```
+git clone https://github.com/Sc01ty/Testing-AI.git
+cd Testing-AI
+git checkout claude/inspiring-curie-wctfxr
 cd rap-but-ranked
 npm install
-npm run dev        # http://localhost:5173
+npm run dev
 ```
+
+Then open http://localhost:5173 (Chrome or Edge, sound on). After that it's just `cd Testing-AI/rap-but-ranked` and `npm run dev`. Requires Node.js 20+.
 
 The production build is `npm run build && npm run preview` (http://localhost:4173). It builds to static files with relative paths, so it can be hosted on GitHub Pages as-is.
 
@@ -24,10 +31,11 @@ The production build is `npm run build && npm run preview` (http://localhost:417
 | `npm run test:e2e` | Browser tests (Playwright): intro, menu, every page, back nav, settings, mobile |
 
 ### Controls
-- **Intro:** plays automatically. Press any key or click to enter. Pressing early skips it.
+- **Intro:** click (or press any key) on *Click to enter*. That starts the theme, and the reveal plays in time with it. Clicking again during the reveal skips to the menu.
 - **Menu:** mouse, or `↑` `↓` / `W` `S` and `Enter`.
 - **Pages:** `Esc`, `Backspace`, the **Menu** button, the logo, or the browser back button.
-- **Settings → Brand intro → Replay** replays the reveal, which is handy for retakes.
+- **M** mutes or unmutes everything.
+- **Settings → Brand intro → Replay** replays the reveal, which is handy for retakes. Refresh the page (F5) to get the full click-to-enter version with the music cue.
 
 ## Stages
 
@@ -44,7 +52,7 @@ The production build is `npm run build && npm run preview` (http://localhost:417
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how each stage plugs in.
 
 ## Audio assets
-- `public/audio/music/menu-theme.mp3` is the supplied *RAP_BUT_RANKED* theme. It loops quietly on the menu, is muffled behind other pages, and only loads after the first gesture.
+- `public/audio/music/menu-theme.mp3` is the supplied *RAP_BUT_RANKED* theme. It starts on *Click to enter* at 2.6s so its first big hit (~4.9s) lands as "RANKED" slams in. It then loops quietly on the menu and is muffled, never restarted, behind other pages. It preloads in the background once the first screen is up.
 - UI sounds are currently tiny procedural Web Audio sounds (`src/audio/synthRecipes.ts`). When the Game Audio Vault is linked, drop files in `public/audio/ui/` and point the entries in `src/audio/sounds.ts` at them. Components won't need to change.
 
 ## Fonts

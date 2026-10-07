@@ -118,3 +118,23 @@ export const enter: SynthRecipe = (ctx, out, t) => {
     tone(ctx, out, t + 0.04 + i * 0.05, { from: f, peak: 0.016, attack: 0.08, decay: 1.2 }),
   )
 }
+
+/** "RAP" lands: short, round low thump with a little grit on top. */
+export const impact: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { from: 140, to: 46, glide: 0.22, peak: 0.3, attack: 0.004, decay: 0.32 })
+  noiseBurst(ctx, out, t, { type: 'lowpass', from: 1400, to: 300, peak: 0.05, attack: 0.002, decay: 0.12 })
+  noiseBurst(ctx, out, t, { type: 'bandpass', from: 2600, q: 2, peak: 0.018, attack: 0.001, decay: 0.025 })
+}
+
+/** "BUT" slides in: quick airy sweep, upward. */
+export const swish: SynthRecipe = (ctx, out, t) => {
+  noiseBurst(ctx, out, t, { type: 'bandpass', from: 900, to: 5200, q: 1.4, peak: 0.04, attack: 0.08, decay: 0.12 })
+}
+
+/** "RANKED" slams: deeper and wider than `impact`, with a soft tail. */
+export const impactBig: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { from: 110, to: 36, glide: 0.45, peak: 0.34, attack: 0.005, decay: 0.7 })
+  tone(ctx, out, t, { type: 'triangle', from: 220, to: 110, glide: 0.2, peak: 0.05, decay: 0.3, lowpass: 900 })
+  noiseBurst(ctx, out, t, { type: 'lowpass', from: 2400, to: 200, peak: 0.07, attack: 0.002, decay: 0.45 })
+  ;[784, 1175].forEach((f, i) => tone(ctx, out, t + 0.03 + i * 0.04, { from: f, peak: 0.01, attack: 0.05, decay: 0.9 }))
+}

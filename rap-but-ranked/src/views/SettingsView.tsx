@@ -37,11 +37,11 @@ export function SettingsView() {
     <PageShell id="settings">
       <div className="settings-grid">
         <Panel title="Sound" i={3} aside={!unlocked ? <span className="eyebrow">Click anywhere to enable audio</span> : undefined}>
-          <Row label="Master" i={4}>
+          <Row label="Master" sub="Everything" i={4}>
             <Slider label="Master volume" value={s.masterVolume} onChange={(v) => set({ masterVolume: v })} onCommit={preview} />
           </Row>
-          <Row label="Interface" sub="Hovers, clicks, transitions" i={5}>
-            <Slider label="Interface volume" value={s.uiVolume} onChange={(v) => set({ uiVolume: v })} onCommit={preview} />
+          <Row label="Sound effects" sub="Hovers, clicks, intro hits" i={5}>
+            <Slider label="Sound effects volume" value={s.uiVolume} onChange={(v) => set({ uiVolume: v })} onCommit={preview} />
           </Row>
           <Row label="Music" sub="Menu theme" i={6}>
             <Slider label="Music volume" value={s.musicVolume} onChange={(v) => set({ musicVolume: v })} />
@@ -49,7 +49,7 @@ export function SettingsView() {
           <Row label="Menu music" i={7}>
             <Toggle label="Menu music" checked={s.menuMusic} onChange={(v) => set({ menuMusic: v })} />
           </Row>
-          <Row label="Mute everything" i={8}>
+          <Row label="Mute everything" sub="Shortcut: M" i={8}>
             <Toggle label="Mute" checked={s.muted} onChange={(v) => set({ muted: v })} />
           </Row>
         </Panel>

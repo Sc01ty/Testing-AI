@@ -1,7 +1,6 @@
 /**
- * After the brand reveal, wait for "press any key" before showing the menu.
- * Browsers block sound until a gesture, so this is where the music and the
- * enter sound come in. Set to false to show the menu automatically
- * (it'll be silent until the first click).
+ * Start on a minimal "click to enter" screen. Browsers block sound until the
+ * user interacts, so this click is what lets the brand reveal play *with* its
+ * music and impacts. Set to false to autoplay the reveal silently instead.
  */
-export const INTRO_WAITS_FOR_INPUT = true
+export const CLICK_TO_ENTER = true
