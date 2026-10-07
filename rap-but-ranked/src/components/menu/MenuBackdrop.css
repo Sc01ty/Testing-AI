@@ -1,0 +1,203 @@
+.backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 52vw;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.backdrop__motif {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translate3d(28px, 0, 0) scale(0.985);
+  transition:
+    opacity 520ms var(--ease-out),
+    transform 900ms var(--ease-out);
+}
+.backdrop__motif[data-on] {
+  opacity: 1;
+  transform: none;
+}
+
+/* PLAY — rank */
+.backdrop__rank-s {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: min(74dvh, 46vw);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.2px rgb(187 154 255 / 0.22);
+  background: linear-gradient(180deg, rgb(123 69 240 / 0.12), transparent 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  translate: -2vw 4dvh;
+}
+.backdrop__ladder {
+  position: absolute;
+  right: calc(var(--gutter) + 6px);
+  top: 50%;
+  translate: 0 -40%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-4);
+  text-align: center;
+}
+.backdrop__ladder li[data-top] {
+  color: var(--purple-300);
+  text-shadow: 0 0 14px rgb(var(--glow) / 0.8);
+}
+
+/* BEATS — waveform with a moving playhead */
+.backdrop__wave {
+  align-content: center;
+  gap: 18px;
+  padding: 0 calc(var(--gutter) + 20px) 0 4vw;
+}
+.backdrop__bars {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 34dvh;
+  width: 100%;
+}
+.backdrop__bars span {
+  flex: 1;
+  height: calc(var(--h) * 100%);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgb(187 154 255 / 0.35), rgb(91 43 192 / 0.2));
+  transform-origin: center;
+  animation: bar-breathe 2.2s var(--ease-inout) var(--d) infinite alternate;
+}
+@keyframes bar-breathe {
+  from {
+    transform: scaleY(0.82);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.backdrop__playhead {
+  position: absolute;
+  top: -8%;
+  bottom: -8%;
+  left: 0;
+  width: 1px;
+  background: var(--purple-200);
+  box-shadow: 0 0 12px rgb(var(--glow));
+  animation: playhead 6s linear infinite;
+}
+@keyframes playhead {
+  from {
+    left: 0%;
+  }
+  to {
+    left: 100%;
+  }
+}
+.backdrop__ruler {
+  justify-self: stretch;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line-2);
+  padding-top: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-4);
+  letter-spacing: 0.1em;
+}
+
+/* FREESTYLE — prompt words drifting up */
+.backdrop__words {
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, transparent, #000 30%, #000 70%, transparent);
+}
+.backdrop__words-track {
+  display: grid;
+  gap: 2dvh;
+  justify-items: end;
+  padding-right: calc(var(--gutter) + 10px);
+  width: 100%;
+  animation: words-up 26s linear infinite;
+}
+.backdrop__words-track span {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2.5rem, 6vw, 6rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(187 154 255 / 0.2);
+}
+.backdrop__words-track span:nth-child(3n + 2) {
+  color: rgb(187 154 255 / 0.08);
+}
+@keyframes words-up {
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+/* SETTINGS — dial */
+.backdrop__dial svg {
+  width: min(62dvh, 40vw);
+  translate: 4vw 0;
+  overflow: visible;
+}
+.backdrop__dial .ring {
+  fill: none;
+  stroke: rgb(187 154 255 / 0.16);
+  stroke-width: 0.6;
+}
+.backdrop__dial .ring--soft {
+  stroke-dasharray: 2 4;
+}
+.backdrop__dial .ring--knob {
+  fill: rgb(91 43 192 / 0.06);
+  stroke: rgb(187 154 255 / 0.3);
+}
+.backdrop__dial .ticks line {
+  stroke: rgb(187 154 255 / 0.22);
+  stroke-width: 0.6;
+}
+.backdrop__dial .knob {
+  animation: knob 9s var(--ease-inout) infinite alternate;
+}
+.backdrop__dial .knob line {
+  stroke: var(--purple-300);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.backdrop__dial .ticks {
+  animation: spin 80s linear infinite;
+}
+@keyframes knob {
+  from {
+    transform: rotate(-120deg);
+  }
+  to {
+    transform: rotate(120deg);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .backdrop {
+    display: none;
+  }
+}

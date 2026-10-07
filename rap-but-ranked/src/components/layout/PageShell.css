@@ -1,0 +1,123 @@
+.page {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 var(--gutter) 64px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-4) transparent;
+}
+
+.page__bar {
+  display: flex;
+  align-items: center;
+  height: 84px;
+}
+.page__brand {
+  display: inline-flex;
+  padding: 6px 0;
+  opacity: 0.9;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+.page__brand:hover {
+  opacity: 1;
+}
+
+.page__head {
+  margin: 3dvh 0 36px;
+}
+
+.page__back {
+  position: relative;
+  z-index: 2; /* stays clickable while it rises in over the title */
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  margin-left: -4px;
+  padding: 0 6px 0 4px;
+  border-radius: var(--radius-1);
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: color var(--dur-2) var(--ease-out);
+}
+.page__back svg {
+  transition: transform var(--dur-3) var(--ease-out);
+}
+.page__back:hover {
+  color: var(--text-1);
+}
+.page__back:hover svg {
+  transform: translateX(-4px);
+}
+.page__back:active svg {
+  transform: translateX(-7px);
+  transition-duration: 80ms;
+}
+.page__back kbd {
+  margin-left: 4px;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-3) var(--ease-out);
+}
+.page__back:hover kbd {
+  opacity: 1;
+  transform: none;
+}
+
+.page__title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 10px;
+}
+.page__index {
+  align-self: flex-start;
+  margin-top: 0.9em;
+  font-size: var(--fs-micro);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--purple-300);
+}
+.page__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-h1);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 60px rgb(var(--glow) / 0.35);
+}
+.page__tagline {
+  margin: 14px 0 0;
+  max-width: 52ch;
+  font-size: var(--fs-lead);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.page__body {
+  position: relative;
+}
+
+@media (max-width: 720px) {
+  .page__bar {
+    height: 64px;
+  }
+  .page__head {
+    margin: 8px 0 24px;
+  }
+  .page__index {
+    display: none;
+  }
+  .page__tagline {
+    font-size: var(--fs-body);
+  }
+}

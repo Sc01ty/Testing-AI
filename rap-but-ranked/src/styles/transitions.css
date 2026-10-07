@@ -1,0 +1,65 @@
+/*
+ * Screen-to-screen choreography (View Transitions API).
+ *
+ *   root    → the persistent background; never animates
+ *   screen  → the current view; old one sinks + blurs out, new one rises in
+ *   brand, title-*  → shared elements that morph between menu and pages
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+.screen {
+  view-transition-name: screen;
+}
+
+::view-transition-group(*) {
+  animation-duration: 600ms;
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-group(screen) {
+  animation: none;
+}
+
+::view-transition-old(screen) {
+  animation: vt-out 260ms var(--ease-in) both;
+}
+::view-transition-new(screen) {
+  animation: vt-in 540ms var(--ease-out) 80ms both;
+}
+:root[data-nav='back']::view-transition-old(screen) {
+  animation-name: vt-out-back;
+}
+:root[data-nav='back']::view-transition-new(screen) {
+  animation-name: vt-in-back;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: scale(0.975) translateY(-8px);
+    filter: blur(6px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: scale(1.015) translateY(14px);
+    filter: blur(6px);
+  }
+}
+@keyframes vt-out-back {
+  to {
+    opacity: 0;
+    transform: scale(1.02) translateY(10px);
+    filter: blur(6px);
+  }
+}
+@keyframes vt-in-back {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(-8px);
+    filter: blur(6px);
+  }
+}

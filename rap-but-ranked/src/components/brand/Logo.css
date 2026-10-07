@@ -1,0 +1,69 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  color: var(--text-1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.logo--sm {
+  font-size: 1.05rem;
+}
+.logo--md {
+  font-size: clamp(1.9rem, 3.6vw, 3.1rem);
+}
+.logo--xl {
+  font-size: var(--logo-fs);
+}
+
+.logo__word {
+  display: inline-flex;
+}
+.logo__ch {
+  display: inline-block;
+}
+
+/* "RANKED" carries the purple: a restrained top-down fill, not a rainbow */
+.logo__ranked .logo__ch {
+  background: linear-gradient(180deg, #f4f1fa 0%, #ddd0ff 38%, var(--purple-400) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.logo__but {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.16em;
+  margin: 0 0.06em;
+  transform: translateY(-0.02em);
+}
+.logo__but-text {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 0.24em;
+  letter-spacing: 0.32em;
+  margin-right: -0.32em; /* optical centring of tracked text */
+  color: var(--purple-300);
+  line-height: 1;
+}
+.logo__but-line {
+  display: block;
+  width: 0.62em;
+  height: max(1px, 0.035em);
+  background: linear-gradient(90deg, transparent, var(--purple-400), transparent);
+  opacity: 0.85;
+}
+
+.logo--sm .logo__but-line {
+  height: 1px;
+}
+.logo--sm .logo__but-text {
+  font-size: 0.32em;
+}

@@ -32,3 +32,10 @@ desktop.ini
 .DS_Store
 *.tmp
 *~
+
+# RAP BUT RANKED (web app)
+node_modules/
+rap-but-ranked/dist/
+rap-but-ranked/test-results/
+rap-but-ranked/playwright-report/
+rap-but-ranked/*.tsbuildinfo

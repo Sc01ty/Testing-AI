@@ -1,0 +1,77 @@
+:root {
+  --glow-x: 72%;
+  --glow-y: 38%;
+}
+
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 0%, var(--bg-1) 0%, var(--bg-0) 60%);
+  overflow: hidden;
+}
+
+.bg__glow {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+/* Main light: follows the selected menu item */
+.bg__glow--a {
+  width: 70vmax;
+  height: 70vmax;
+  left: var(--glow-x);
+  top: var(--glow-y);
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgb(91 43 192 / 0.32) 0%, rgb(63 29 125 / 0.16) 35%, transparent 68%);
+  transition:
+    left 1.4s var(--ease-out),
+    top 1.4s var(--ease-out),
+    opacity 1s var(--ease-out);
+  animation: glow-drift 22s var(--ease-inout) infinite alternate;
+}
+
+.bg__glow--b {
+  width: 55vmax;
+  height: 55vmax;
+  left: -12vmax;
+  bottom: -30vmax;
+  background: radial-gradient(circle, rgb(42 20 82 / 0.55) 0%, transparent 65%);
+  animation: glow-drift 30s var(--ease-inout) -8s infinite alternate-reverse;
+}
+
+@keyframes glow-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+
+/* Bar grid: every 4th line stronger, like bars over beats */
+.bg__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(90deg, rgb(200 180 255 / 0.045) 0 1px, transparent 1px calc(100% / 4)),
+    repeating-linear-gradient(90deg, rgb(200 180 255 / 0.018) 0 1px, transparent 1px calc(100% / 16));
+  mask-image: radial-gradient(90% 70% at 60% 45%, #000 0%, transparent 75%);
+  opacity: 0.9;
+}
+
+.bg__grain {
+  position: absolute;
+  inset: 0;
+  background-image: url('../../assets/grain.png');
+  background-size: 192px;
+  opacity: 0.045;
+}
+
+.bg__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130% 100% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.65) 100%);
+}
