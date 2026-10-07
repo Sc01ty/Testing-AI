@@ -31,11 +31,12 @@ The production build is `npm run build && npm run preview` (http://localhost:417
 | `npm run test:e2e` | Browser tests (Playwright): intro, menu, every page, back nav, settings, mobile |
 
 ### Controls
-- **Intro:** click (or press any key) on *Click to enter*. That starts the theme, and the reveal plays in time with it. Clicking again during the reveal skips to the menu.
+- **Intro:** a ~2s brand sting plays on load, then the menu builds in. Any click or key skips it.
+- **Audio:** browsers block sound until you interact with the page. If yours does, the sting is silent and the menu theme and UI sounds start on your first click or key press (hovering doesn't count as interaction for browsers).
 - **Menu:** mouse, or `↑` `↓` / `W` `S` and `Enter`.
 - **Pages:** `Esc`, `Backspace`, the **Menu** button, the logo, or the browser back button.
 - **M** mutes or unmutes everything.
-- **Settings → Brand intro → Replay** replays the reveal, which is handy for retakes. Refresh the page (F5) to get the full click-to-enter version with the music cue.
+- **Settings → Brand intro → Replay** replays the sting, which is handy for retakes.
 
 ## Stages
 
@@ -52,7 +53,7 @@ The production build is `npm run build && npm run preview` (http://localhost:417
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how each stage plugs in.
 
 ## Audio assets
-- `public/audio/music/menu-theme.mp3` is the supplied *RAP_BUT_RANKED* theme. It starts on *Click to enter* at 2.6s so its first big hit (~4.9s) lands as "RANKED" slams in. It then loops quietly on the menu and is muffled, never restarted, behind other pages. It preloads in the background once the first screen is up.
+- `public/audio/music/menu-theme.mp3` is the supplied *RAP_BUT_RANKED* theme. It loops quietly on the menu and is muffled, never restarted, behind other pages. It preloads in the background once the page is up and starts on the first interaction, or immediately if the browser allows autoplay.
 - UI sounds are currently tiny procedural Web Audio sounds (`src/audio/synthRecipes.ts`). When the Game Audio Vault is linked, drop files in `public/audio/ui/` and point the entries in `src/audio/sounds.ts` at them. Components won't need to change.
 
 ## Fonts

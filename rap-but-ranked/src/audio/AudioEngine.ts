@@ -25,7 +25,6 @@ class AudioEngine {
   private musicMood!: GainNode
   private music: { id: MusicTrackId; el: HTMLAudioElement; gain: GainNode; analyser: AnalyserNode } | null = null
   private wantedMusic: MusicTrackId | null = null
-  private wantedOffset = 0
   /** Elements created ahead of time so the first play doesn't wait on the network. */
   private preloaded = new Map<MusicTrackId, HTMLAudioElement>()
   private freq: Uint8Array<ArrayBuffer> | null = null
@@ -53,7 +52,12 @@ class AudioEngine {
     return () => this.listeners.delete(fn)
   }
 
-  /** Call from a click/keydown/touch handler. Safe to call repeatedly. */
+  /**
+   * Create/resume audio. Inside a click/keydown handler this always works.
+   * Outside one (e.g. on page load) it only gets going if the browser already
+   * allows autoplay for this site; otherwise it waits, suspended, for a gesture.
+   * Safe to call repeatedly.
+   */
   unlock() {
     if (typeof window === 'undefined' || !('AudioContext' in window)) return
     if (!this.ctx) {
@@ -71,7 +75,11 @@ class AudioEngine {
       this.musicFilter.connect(this.musicMood).connect(this.musicBus).connect(this.master)
       this.master.connect(ctx.destination)
       this.applyLevels(true)
-      ctx.addEventListener('statechange', () => this.emit())
+      // audio may start suspended (autoplay rules) and resume on a later gesture
+      ctx.addEventListener('statechange', () => {
+        this.syncMusic()
+        this.emit()
+      })
     }
     if (this.ctx.state !== 'running') void this.ctx.resume().then(() => this.emit())
     this.syncMusic()
@@ -124,18 +132,6 @@ class AudioEngine {
     this.preloaded.set(id, el)
   }
 
-  /** Where the first play of a track should begin (seconds). Ignored once it's playing. */
-  setMusicStartOffset(seconds: number) {
-    this.wantedOffset = seconds
-  }
-
-  /** Playback position of the current track, or null if nothing is audibly running. */
-  getMusicTime(id: MusicTrackId): number | null {
-    const m = this.music
-    if (!m || m.id !== id || m.el.paused || m.el.readyState < 3) return null
-    return m.el.currentTime
-  }
-
   /**
    * Rough 0..1 loudness of the music's low end, for visuals that should move
    * with the track. Not beat detection — just "how much bass right now".
@@ -166,7 +162,7 @@ class AudioEngine {
 
   private syncMusic() {
     const ctx = this.ctx
-    if (!ctx) return
+    if (!ctx || ctx.state !== 'running') return
     const want = this.settings.menuMusic ? this.wantedMusic : null
     if (this.music && this.music.id !== want) this.fadeOutMusic()
     if (want && !this.music) this.startMusic(want)
@@ -192,11 +188,6 @@ class AudioEngine {
     source.connect(gain).connect(this.musicFilter)
     source.connect(analyser)
     this.music = { id, el, gain, analyser }
-    if (this.wantedOffset > 0) {
-      const offset = this.wantedOffset
-      if (el.readyState >= 1) el.currentTime = offset
-      else el.addEventListener('loadedmetadata', () => (el.currentTime = offset), { once: true })
-    }
     const fadeIn = () => {
       const t = ctx.currentTime
       gain.gain.cancelScheduledValues(t)

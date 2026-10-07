@@ -11,6 +11,18 @@
 .backdrop {
   --energy: 0.35;
 }
+.title:not([data-phase='menu']) .backdrop {
+  opacity: 0;
+}
+.title[data-phase='menu']:not([data-returning]) .backdrop {
+  animation: backdrop-in 900ms var(--ease-out) 200ms both;
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+    transform: translate3d(3vw, 0, 0) scale(0.97);
+  }
+}
 
 /* Motifs ride a vertical rail in menu order: --pos is -1 (above), 0, or 1 (below) */
 .backdrop__motif {

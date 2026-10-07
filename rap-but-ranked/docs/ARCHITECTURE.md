@@ -30,11 +30,18 @@ src/
 - Browsers without View Transitions, or with reduced motion on, swap instantly and keep the CSS entrance animations.
 
 ## Intro
-`MenuView` owns both the title sequence and the menu, so the logo is a single element that travels from centre stage to the menu corner (`enter → pre → rap → reveal → settle → menu`).
+On first load, `MenuView` shows a ~2s CSS brand sting in an overlay above the menu (`loading → intro → menu`). JS only waits briefly for the display font, mounts the sting and flips to the menu at 2.0s; the choreography itself is CSS keyframes in `MenuView.css`:
 
-- **enter:** a minimal *Click to enter*. Browsers block audio until a gesture, so this click unlocks the AudioContext and starts the theme. `app/config.ts → CLICK_TO_ENTER` can turn it off.
-- **Music-synced reveal:** the theme starts at `MENU_THEME_START` (2.6s). The intro polls the music's own clock (`audio.getMusicTime`) and starts the reveal so RANKED lands on `MENU_THEME_HIT`. If the music is off or still buffering, it falls back to fixed timings, so the intro never stalls.
-- **Sounds:** `impact` when RAP lands, `swish` for BUT, `impactBig` under RANKED, `transition` as the menu arrives.
+| Time | Beat |
+| --- | --- |
+| 0.15s | RAP: diagonal clip-path wipe, settling from scale + blur |
+| 0.55s | a thin purple slice cuts across RAP and leaves a brief glow |
+| 0.8s | RAP slides left; BUT opens in the gap |
+| 1.0s | RANKED expands from blur into focus; violet bloom behind |
+| 1.5s | hold |
+| 2.0s | sting lifts away; menu logo, rows, backdrop and rank chip build in (usable immediately) |
+
+A click or key skips it. Reduced motion skips it entirely. There's no click-to-enter: if the browser blocks autoplay, the sting is silent (its impact sounds only play when autoplay is already allowed) and audio starts on the first click or key press.
 
 ## Audio
 `audio/AudioEngine.ts` is one lazily created `AudioContext`:
@@ -48,7 +55,7 @@ music ─ lowpass ─ mood ─ bus ┼─ master ─ out
 - Components request sounds **by meaning** (`audio.play('confirm')`). `audio/sounds.ts` maps each meaning to a synth recipe or an audio file.
 - Volumes come from settings (perceptual curve). Mute, master, UI and music levels are all live.
 - Every call is a silent no-op until `unlock()`, so no component has to care about autoplay rules.
-- Music is "wanted" from boot, preloaded once the first screen is idle, and started on the first gesture with a fade-in. Sub-pages muffle it with a lowpass rather than cutting or restarting it.
+- Music is "wanted" from boot and preloaded once the page is idle. `unlock()` is tried on load (it works where autoplay is allowed) and again on every click/key press; the theme fades in as soon as the context is actually running. Sub-pages muffle it with a lowpass rather than cutting or restarting it.
 - `audio/musicEnergy.ts` runs one animation loop that reads the music's bass level (an AnalyserNode before the volume controls) and writes a smoothed `--energy` CSS variable to subscribed elements: the menu backdrop, the background glow and the sound icon. It's a fast-attack, slow-release loudness follower, not beat detection, and falls back to gentle procedural motion when no music is playing.
 
 ## Settings

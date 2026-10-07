@@ -7,287 +7,216 @@
   z-index: 1;
 }
 
-/* ── Logo: one element travels from centre stage to the menu corner ── */
-.title__logo {
+/* ── Menu logo (top-left) ── */
+.menu-brand {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-origin: 0 0;
-  transform: translate(-50%, -62%);
-  transition: transform 1100ms var(--ease-out);
+  left: var(--gutter);
+  top: var(--menu-top);
   z-index: 2;
+  line-height: 0;
 }
-.title[data-phase='menu'] .title__logo {
-  transform: translate(calc(var(--gutter) - 50vw), calc(var(--menu-top) - 50dvh)) scale(var(--logo-scale));
+.menu-brand .logo {
+  font-size: calc(var(--logo-fs) * var(--logo-scale));
 }
-
-.title__logo-inner {
-  transform: translate3d(var(--rap-shift, 0px), 0, 0);
-  transition: transform 1000ms var(--ease-out);
-}
-.title:is([data-phase='reveal'], [data-phase='settle'], [data-phase='menu']) .title__logo-inner {
-  transform: none;
-}
-
-/* letters rise out of an invisible floor */
-.title .logo__word {
-  clip-path: inset(-40% -12% -1% -12%);
-}
-.title .logo__ch {
-  transform: translate3d(0, 108%, 0);
-  transition: transform 900ms var(--ease-out);
-}
-.title .logo__rap .logo__ch {
-  transition-delay: calc(var(--ci) * 75ms);
-}
-.title .logo__ranked .logo__ch {
-  transition-delay: calc(220ms + var(--ci) * 45ms);
-}
-.title:is([data-phase='rap'], [data-phase='reveal'], [data-phase='settle'], [data-phase='menu']) .logo__rap .logo__ch,
-.title:is([data-phase='reveal'], [data-phase='settle'], [data-phase='menu']) .logo__ranked .logo__ch {
-  transform: none;
-}
-
-.title .logo__but-line {
-  transform: scaleX(0);
-  transition: transform 700ms var(--ease-out) 120ms;
-}
-.title .logo__but-text {
-  opacity: 0;
-  letter-spacing: 0.9em;
-  transition:
-    opacity 500ms var(--ease-out) 160ms,
-    letter-spacing 900ms var(--ease-out) 120ms;
-}
-.title:is([data-phase='reveal'], [data-phase='settle'], [data-phase='menu']) .logo__but-line {
-  transform: none;
-}
-.title:is([data-phase='reveal'], [data-phase='settle'], [data-phase='menu']) .logo__but-text {
-  opacity: 1;
-  letter-spacing: 0.32em;
-}
-
-/* soft violet bloom at the moment RAP becomes RAP BUT RANKED */
-.title__bloom {
-  position: absolute;
-  inset: -70% -12%;
-  z-index: -1;
-  pointer-events: none;
-  background: radial-gradient(50% 50% at 50% 50%, rgb(var(--glow) / 0.42), rgb(var(--glow) / 0.08) 45%, transparent 70%);
-  opacity: 0;
-  transform: scale(0.6);
-}
-.title[data-phase='rap'] .title__bloom {
-  opacity: 0.25;
-  transform: scale(0.45);
-  transition:
-    opacity 900ms var(--ease-out),
-    transform 900ms var(--ease-out);
-}
-.title[data-phase='reveal'] .title__bloom {
-  animation: bloom 1500ms var(--ease-out) forwards;
-}
-.title[data-phase='settle'] .title__bloom {
-  opacity: 0.38;
-  transform: scale(1);
-  animation: breathe 4s var(--ease-inout) infinite;
-}
-.title[data-phase='menu'] .title__bloom {
-  opacity: 0;
-  transition: opacity 700ms var(--ease-out);
-}
-@keyframes bloom {
-  0% {
-    opacity: 0.25;
-    transform: scale(0.45);
-  }
-  30% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.38;
-    transform: scale(1);
-  }
-}
-@keyframes breathe {
-  50% {
-    opacity: 0.26;
-  }
-}
-
-/* a hairline that cuts across as the full name lands */
-.title__rule {
-  position: absolute;
-  left: 50%;
-  bottom: -0.4em;
-  width: 82vw;
+.menu-brand .logo__but-line {
   height: 1px;
-  translate: -50% 0;
-  font-size: var(--logo-fs);
-  background: linear-gradient(90deg, transparent, rgb(var(--glow) / 0.8) 30%, #fff 50%, rgb(var(--glow) / 0.8) 70%, transparent);
-  transform: scaleX(0);
+}
+.title:not([data-phase='menu']) .menu-brand {
   opacity: 0;
-  pointer-events: none;
 }
-.title[data-phase='reveal'] .title__rule {
-  animation: rule 1300ms var(--ease-out) 120ms forwards;
+.title[data-phase='menu']:not([data-returning]) .menu-brand {
+  animation: brand-in 520ms var(--ease-out) 60ms both;
 }
-@keyframes rule {
-  0% {
-    transform: scaleX(0);
-    opacity: 1;
-  }
-  55% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 0;
-  }
-}
-
-/* ── Tagline ── */
-.title__tagline {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + var(--logo-fs) * 0.42);
-  translate: -50% 0;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  white-space: nowrap;
-  font-size: var(--fs-small);
-  font-weight: 700;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-2);
-  pointer-events: none;
-}
-.title__tagline > * {
-  opacity: 0;
-  transform: translate3d(0, 8px, 0);
-  transition:
-    opacity 600ms var(--ease-out),
-    transform 600ms var(--ease-out);
-}
-.title__tagline i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--purple-400);
-}
-.title[data-phase='settle'] .title__tagline > * {
-  opacity: 1;
-  transform: none;
-}
-.title[data-phase='settle'] .title__tagline > :nth-child(1) { transition-delay: 0ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(2) { transition-delay: 60ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(3) { transition-delay: 120ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(4) { transition-delay: 180ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(5) { transition-delay: 240ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(6) { transition-delay: 300ms; }
-.title[data-phase='settle'] .title__tagline > :nth-child(7) { transition-delay: 360ms; }
-.title[data-phase='menu'] .title__tagline > * {
-  transition-duration: 250ms;
-  transform: translate3d(0, -6px, 0);
-}
-
-/* ── Click to enter: the only thing on screen before audio is allowed ── */
-.title__enter {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  translate: -50% -50%;
-  z-index: 4;
-  display: grid;
-  justify-items: center;
-  gap: 16px;
-  transition:
-    opacity 280ms var(--ease-in),
-    filter 280ms var(--ease-in),
-    transform 320ms var(--ease-in),
-    visibility 0s linear 320ms;
-}
-.title:not([data-phase='enter']) .title__enter {
-  opacity: 0;
-  filter: blur(6px);
-  transform: scale(0.94);
-  visibility: hidden;
-  pointer-events: none;
-}
-.title[data-phase='enter'] {
-  cursor: pointer;
-}
-.title[data-phase='enter'] .title__enter {
-  animation: enter-in 900ms var(--ease-out) 150ms both;
-}
-@keyframes enter-in {
+@keyframes brand-in {
   from {
     opacity: 0;
+    filter: blur(10px);
+    transform: translate3d(0, -6px, 0) scale(1.03);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Intro sting (~2s). Pure CSS: JS only mounts it once the font is
+ * ready and flips to the menu at 2.0s.
+ *
+ *   0.15  RAP — diagonal cut reveal, settling from scale + blur
+ *   0.55  slice — a thin purple line cuts through RAP
+ *   0.80  RAP slides left; BUT opens in the gap
+ *   1.00  RANKED — expands from blur into focus (the big moment)
+ *   1.50  hold
+ *   2.00  sting lifts away as the menu builds in
+ * ────────────────────────────────────────────────────────────── */
+.intro {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.intro[data-out] {
+  animation: intro-out 300ms var(--ease-in) forwards;
+}
+@keyframes intro-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -5dvh, 0) scale(0.92);
+    filter: blur(10px);
+  }
+}
+.title[data-phase='loading'] .intro__stage {
+  visibility: hidden;
+}
+
+.intro__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.intro__logo {
+  /* RAP is centred alone first, then everything shifts into the full lockup */
+  animation: intro-shift 620ms var(--ease-out) 800ms both;
+}
+@keyframes intro-shift {
+  from {
+    transform: translate3d(var(--rap-shift, 0px), 0, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* RAP: a hard diagonal wipe while it settles from slightly big + soft */
+.intro .logo__rap {
+  animation: intro-rap 560ms var(--ease-out) 150ms both;
+}
+@keyframes intro-rap {
+  from {
+    clip-path: polygon(-30% -20%, -30% -20%, -50% 120%, -50% 120%);
+    transform: scale(1.12);
     filter: blur(8px);
   }
-}
-
-.title__enter-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 22px;
-  padding: 14px 6px;
-  font-size: var(--fs-small);
-  font-weight: 800;
-  letter-spacing: 0.48em;
-  text-transform: uppercase;
-  color: var(--text-1);
-  transition:
-    letter-spacing 500ms var(--ease-out),
-    color var(--dur-2) var(--ease-out),
-    text-shadow 500ms var(--ease-out);
-}
-/* hairlines either side */
-.title__enter-btn::before,
-.title__enter-btn::after {
-  content: '';
-  width: 44px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--purple-400));
-  transition: width 500ms var(--ease-out);
-}
-.title__enter-btn::after {
-  margin-left: -0.48em; /* swallow the trailing letter-spacing */
-  background: linear-gradient(90deg, var(--purple-400), transparent);
-}
-.title[data-phase='enter'] .title__enter-btn {
-  animation: enter-breathe 2.8s var(--ease-inout) 1.1s infinite;
-}
-.title[data-phase='enter']:hover .title__enter-btn {
-  animation-play-state: paused;
-  letter-spacing: 0.56em;
-  text-shadow: 0 0 24px rgb(var(--glow) / 0.8);
-}
-.title[data-phase='enter']:hover .title__enter-btn::before,
-.title[data-phase='enter']:hover .title__enter-btn::after {
-  width: 72px;
-}
-@keyframes enter-breathe {
-  50% {
-    opacity: 0.55;
+  60% {
+    filter: blur(0);
+  }
+  to {
+    clip-path: polygon(-30% -20%, 140% -20%, 120% 120%, -50% 120%);
+    transform: none;
+    filter: none;
   }
 }
-.title__enter-hint {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--text-3);
+/* the slice leaves a brief glow on the letters it cuts */
+.intro .logo__rap .logo__ch {
+  animation: intro-rap-glow 700ms var(--ease-out) 600ms both;
+}
+@keyframes intro-rap-glow {
+  0% {
+    text-shadow: 0 0 0 transparent;
+  }
+  25% {
+    text-shadow:
+      0 0 36px rgb(var(--glow) / 0.9),
+      0 0 2px #fff;
+  }
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
 }
 
-/* a soft light waits behind the prompt */
-.title[data-phase='enter'] .title__bloom {
-  opacity: 0.12;
-  transform: scale(0.5);
-  animation: breathe 4s var(--ease-inout) infinite;
+/* slice: a hairline that draws across RAP, then exits to the right */
+.intro__slice {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(52vw, 760px);
+  height: 2px;
+  margin-left: calc(min(52vw, 760px) / -2);
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--purple-500) 25%, #fff 55%, var(--purple-300) 75%, transparent);
+  box-shadow: 0 0 18px rgb(var(--glow) / 0.9);
+  transform-origin: 0 50%;
+  z-index: 1; /* over the letters, so it reads as a cut */
+  opacity: 0;
+  animation: intro-slice 620ms var(--ease-out) 550ms both;
+}
+@keyframes intro-slice {
+  0% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  45% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(16vw) scaleX(0.25);
+  }
+}
+
+/* BUT: hairlines draw out, letters close in */
+.intro .logo__but-line {
+  animation: intro-but-line 480ms var(--ease-out) 820ms both;
+}
+@keyframes intro-but-line {
+  from {
+    transform: scaleX(0);
+  }
+}
+.intro .logo__but-text {
+  animation: intro-but 520ms var(--ease-out) 800ms both;
+}
+@keyframes intro-but {
+  from {
+    opacity: 0;
+    letter-spacing: 0.9em;
+    filter: blur(4px);
+  }
+}
+
+/* RANKED: the strongest reveal — expands out of a blur into sharp focus */
+.intro .logo__ranked {
+  transform-origin: 0% 55%;
+  animation: intro-ranked 640ms var(--ease-out) 1000ms both;
+}
+@keyframes intro-ranked {
+  from {
+    opacity: 0;
+    transform: translate3d(-8%, 0, 0) scaleX(1.25);
+    filter: blur(18px);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* depth: a violet bloom swells behind the full lockup */
+.intro__bloom {
+  position: absolute;
+  inset: -90% -15%;
+  z-index: -1;
+  background: radial-gradient(50% 50% at 50% 50%, rgb(var(--glow) / 0.4), rgb(var(--glow) / 0.07) 45%, transparent 70%);
+  opacity: 0;
+  animation: intro-bloom 1100ms var(--ease-out) 950ms both;
+}
+@keyframes intro-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
 }
 
 /* ── Menu ── */
@@ -311,8 +240,8 @@
 }
 
 .title[data-phase='menu'] .menu__row {
-  animation: menu-row-in 760ms var(--ease-out) both;
-  animation-delay: calc(380ms + var(--i) * 75ms);
+  animation: menu-row-in 560ms var(--ease-out) both;
+  animation-delay: calc(200ms + var(--i) * 60ms);
 }
 .title[data-phase='menu'][data-returning] .menu__row {
   animation-duration: 520ms;
@@ -517,7 +446,7 @@
 }
 .title[data-phase='menu'] .title__chrome {
   opacity: 1;
-  transition-delay: 900ms;
+  transition-delay: 420ms;
 }
 .title[data-phase='menu'][data-returning] .title__chrome {
   transition-delay: 100ms;
@@ -584,15 +513,6 @@ kbd {
   .title {
     --menu-top: 9dvh;
     --logo-scale: 0.66;
-  }
-  .title__tagline {
-    top: calc(50% + var(--logo-fs) * 0.55);
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 86vw;
-    white-space: normal;
-    row-gap: 6px;
-    font-size: 10px;
   }
   .menu {
     right: var(--gutter);

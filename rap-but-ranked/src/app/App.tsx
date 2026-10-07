@@ -23,7 +23,11 @@ export function App() {
     // The menu theme is "wanted" from the start; it only begins after the first gesture.
     audio.setMusic('menu')
     audio.setMusicMood(route === 'menu' ? 'menu' : 'muffled')
-    // Deep links skip the intro gate, so unlock audio on the first interaction anywhere.
+    // Try straight away: works if the browser already allows autoplay here.
+    // Otherwise audio (and the menu theme) starts on the first click or key press.
+    audio.unlock()
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 300))
+    idle(() => audio.preloadMusic('menu'))
     const unlock = () => audio.unlock()
     // M toggles mute anywhere (except while typing)
     const onKey = (e: KeyboardEvent) => {
@@ -35,8 +39,8 @@ export function App() {
       if (!muted) requestAnimationFrame(() => audio.play('toggle'))
     }
     window.addEventListener('keydown', onKey)
-    window.addEventListener('pointerdown', unlock, { capture: true, once: true })
-    window.addEventListener('keydown', unlock, { capture: true, once: true })
+    window.addEventListener('pointerdown', unlock, { capture: true })
+    window.addEventListener('keydown', unlock, { capture: true })
     return () => {
       window.removeEventListener('pointerdown', unlock, { capture: true })
       window.removeEventListener('keydown', unlock, { capture: true })
