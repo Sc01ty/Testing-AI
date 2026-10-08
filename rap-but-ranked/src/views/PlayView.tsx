@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react'
 import { PageShell } from '../components/layout/PageShell'
-import { Button, Field, Panel, Segmented, StageLock } from '../components/ui/ui'
+import { Button, Field, Panel, Segmented } from '../components/ui/ui'
 import { RANKS } from '../domain/rank'
+import { BeatSelect } from '../components/beats/BeatSelect'
 import type { TrackLength } from '../domain/types'
 import './views.css'
 
@@ -23,10 +24,8 @@ export function PlayView() {
             <Field label="Track name">
               <input className="input" placeholder="Untitled track" maxLength={40} />
             </Field>
-            <Field label="Beat" hint={<StageLock stage={2} />}>
-              <div className="input input--fake" aria-disabled>
-                No beats yet — the library opens next
-              </div>
+            <Field label="Beat">
+              <BeatSelect />
             </Field>
             <Field label="Starting topic">
               <input className="input" placeholder="e.g. wanting money" maxLength={60} />

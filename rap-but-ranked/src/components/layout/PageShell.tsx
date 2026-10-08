@@ -1,7 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { audio } from '../../audio/AudioEngine'
 import { router } from '../../app/router'
-import { MENU_ROUTES, type RouteId } from '../../app/routes'
+import { BUILT_STAGE, MENU_ROUTES, type RouteId } from '../../app/routes'
 import { Logo } from '../brand/Logo'
 import { StageLock } from '../ui/ui'
 import './PageShell.css'
@@ -23,6 +23,7 @@ export function PageShell({ id, children, side }: { id: RouteId; children: React
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
       const t = e.target as HTMLElement
       const typing = t.closest('input, textarea, [contenteditable="true"]')
       if (e.key === 'Escape' || (e.key === 'Backspace' && !typing)) {
@@ -56,7 +57,7 @@ export function PageShell({ id, children, side }: { id: RouteId; children: React
             {meta.label}
           </h1>
           <span className="page__stage enter" style={{ '--i': 2 } as CSSProperties}>
-            {meta.stage > 1 && id !== 'settings' ? <StageLock stage={meta.stage}>Opens in stage {meta.stage}</StageLock> : side}
+            {meta.stage > BUILT_STAGE && id !== 'settings' ? <StageLock stage={meta.stage}>Opens in stage {meta.stage}</StageLock> : side}
           </span>
         </div>
         <p className="page__tagline enter" style={{ '--i': 1 } as CSSProperties}>

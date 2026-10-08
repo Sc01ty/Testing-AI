@@ -11,6 +11,7 @@ export interface Settings {
   masterVolume: number // 0..1
   uiVolume: number // 0..1
   musicVolume: number // 0..1
+  beatVolume: number // 0..1 — beat previews / playback
   muted: boolean
   menuMusic: boolean
   motion: MotionPreference
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   masterVolume: 0.9,
   uiVolume: 0.7,
   musicVolume: 0.5,
+  beatVolume: 0.9,
   muted: false,
   menuMusic: true,
   motion: 'system',
@@ -37,6 +39,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     masterVolume: clamp01(r.masterVolume, d.masterVolume),
     uiVolume: clamp01(r.uiVolume, d.uiVolume),
     musicVolume: clamp01(r.musicVolume, d.musicVolume),
+    beatVolume: clamp01(r.beatVolume, d.beatVolume),
     muted: typeof r.muted === 'boolean' ? r.muted : d.muted,
     menuMusic: typeof r.menuMusic === 'boolean' ? r.menuMusic : d.menuMusic,
     motion: r.motion === 'reduced' || r.motion === 'full' || r.motion === 'system' ? r.motion : d.motion,

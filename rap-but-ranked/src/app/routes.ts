@@ -16,6 +16,9 @@ export const MENU_ROUTES: RouteMeta[] = [
   { id: 'settings', label: 'SETTINGS', tagline: 'Sound, motion, devices.', stage: 7 },
 ]
 
+/** The latest stage that's been built; screens for later stages show a lock badge. */
+export const BUILT_STAGE = 2
+
 export const ROUTE_IDS: RouteId[] = ['menu', ...MENU_ROUTES.map((r) => r.id)]
 
 export function parseHash(hash: string): RouteId {

@@ -132,20 +132,6 @@ test('M toggles mute from anywhere', async ({ page }) => {
   await expect(toggle).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('beats: dropping a file is caught and politely refused (Stage 2)', async ({ page }) => {
-  await page.goto('/#/beats')
-  const zone = page.locator('.dropzone')
-  const dt = await page.evaluateHandle(() => {
-    const d = new DataTransfer()
-    d.items.add(new File(['x'], 'beat.mp3', { type: 'audio/mpeg' }))
-    return d
-  })
-  await zone.dispatchEvent('dragenter', { dataTransfer: dt })
-  await zone.dispatchEvent('drop', { dataTransfer: dt })
-  await expect(page.getByText('Not yet.')).toBeVisible()
-  await expect(page).toHaveURL(/#\/beats$/)
-})
-
 test('mobile: menu is usable by touch', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
   const page = await ctx.newPage()

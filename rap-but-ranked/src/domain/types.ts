@@ -1,24 +1,41 @@
 /**
  * Core domain model for the whole product. Stage 1 only *declares* these so
- * later stages slot in without reshaping the app. Nothing here is persisted yet.
+ * later stages slot in without reshaping the app.
  */
 
 // ── Beats (Stage 2) ────────────────────────────────────────────────
-export interface Beat {
+export type BpmSource = 'auto' | 'manual' | 'tap'
+
+/** Everything about a beat except the audio itself (cheap to list). */
+export interface BeatMeta {
   id: string
   name: string
-  /** Audio blob lives in IndexedDB under this key, never in localStorage. */
-  audioKey: string
-  mimeType: 'audio/mpeg' | 'audio/wav' | string
+  fileName: string
+  mimeType: string
+  sizeBytes: number
   durationSec: number
   bpm: number
-  bpmSource: 'auto' | 'manual' | 'tap'
-  /** Seconds before bar 1 beat 1 (intro / silence). */
-  offsetSec: number
+  bpmSource: BpmSource
+  /** 0..1 from the detector; null once the user has set BPM themselves. */
+  bpmConfidence: number | null
+  /** Seconds before bar 1, beat 1 (intro / silence). */
+  introOffset: number
+  introOffsetSource: 'auto' | 'manual'
+  /** 4/4 for now. */
   beatsPerBar: number
-  /** Downsampled peaks for the small card waveform. */
+  /** Normalised 0..1 peak per waveform column, from the real audio. */
   peaks: number[]
   createdAt: number
+  updatedAt: number
+}
+
+/** What Play / Freestyle get from `getSavedBeats()`. */
+export interface SavedBeat extends BeatMeta {
+  blob: Blob
+  secondsPerBeat: number
+  secondsPerBar: number
+  /** Whole bars that fit after the intro offset. */
+  barCount: number
 }
 
 // ── Play sessions (Stage 3–5) ──────────────────────────────────────

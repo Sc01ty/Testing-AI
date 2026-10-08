@@ -23,6 +23,8 @@ class AudioEngine {
   private musicBus!: GainNode
   private musicFilter!: BiquadFilterNode
   private musicMood!: GainNode
+  private musicDuck!: GainNode
+  private beatBus!: GainNode
   private music: { id: MusicTrackId; el: HTMLAudioElement; gain: GainNode; analyser: AnalyserNode } | null = null
   private wantedMusic: MusicTrackId | null = null
   /** Elements created ahead of time so the first play doesn't wait on the network. */
@@ -67,12 +69,15 @@ class AudioEngine {
       this.uiBus = ctx.createGain()
       this.musicBus = ctx.createGain()
       this.musicMood = ctx.createGain()
+      this.musicDuck = ctx.createGain()
+      this.beatBus = ctx.createGain()
       this.musicFilter = ctx.createBiquadFilter()
       this.musicFilter.type = 'lowpass'
       this.musicFilter.frequency.value = 20000
       this.musicFilter.Q.value = 0.5
       this.uiBus.connect(this.master)
-      this.musicFilter.connect(this.musicMood).connect(this.musicBus).connect(this.master)
+      this.musicFilter.connect(this.musicMood).connect(this.musicDuck).connect(this.musicBus).connect(this.master)
+      this.beatBus.connect(this.master)
       this.master.connect(ctx.destination)
       this.applyLevels(true)
       // audio may start suspended (autoplay rules) and resume on a later gesture
@@ -147,6 +152,25 @@ class AudioEngine {
     let sum = 0
     for (let i = 1; i <= 6; i++) sum += this.freq[i]
     return sum / (6 * 255)
+  }
+
+  /** The running AudioContext, or null before the first unlock. */
+  get context(): AudioContext | null {
+    return this.ctx
+  }
+
+  /** Where beat previews (and later the Play transport) connect. */
+  get beatOutput(): AudioNode | null {
+    return this.ctx ? this.beatBus : null
+  }
+
+  /** Fade the menu music right down while a beat is previewing, and back afterwards. */
+  setMusicDucked(ducked: boolean) {
+    const ctx = this.ctx
+    if (!ctx) return
+    const t = ctx.currentTime
+    this.musicDuck.gain.cancelScheduledValues(t)
+    this.musicDuck.gain.setTargetAtTime(ducked ? 0 : 1, t, ducked ? 0.08 : 0.5)
   }
 
   /** Muffle the menu theme behind sub-pages instead of cutting it. */
@@ -228,6 +252,7 @@ class AudioEngine {
     set(this.master.gain, s.muted ? 0 : perceptualGain(s.masterVolume))
     set(this.uiBus.gain, perceptualGain(s.uiVolume))
     set(this.musicBus.gain, perceptualGain(s.musicVolume))
+    set(this.beatBus.gain, perceptualGain(s.beatVolume))
   }
 
   private loadBuffer(url: string) {

@@ -13,9 +13,12 @@ src/
     ui/           Button, Panel, Field, Segmented, Toggle, Slider, StageLock
   styles/         tokens.css (design tokens), base.css, transitions.css
   motion/         reduced-motion resolution, View Transition wrapper
-  audio/          AudioEngine (buses), sound registry, synth recipes
+  audio/          AudioEngine (buses), sound registry, synth recipes, BeatPlayer
+    analysis/     decode, waveform peaks, tempo + downbeat detection (worker)
   settings/       persisted settings store + hook
-  domain/         types for beats, takes, challenges, scores, ranks; rank thresholds
+  domain/         types for beats, takes, challenges, scores, ranks; rank thresholds; beat grid maths
+  storage/        IndexedDB wrapper + beat library API (no UI)
+  lib/            small helpers (formatting, tap tempo)
   services/ai/    provider-agnostic AIService contract (no implementation yet)
 ```
 
@@ -47,9 +50,10 @@ A click or key skips it. Reduced motion skips it entirely. There's no click-to-e
 `audio/AudioEngine.ts` is one lazily created `AudioContext`:
 
 ```
-ui bus ─────────────────┐
-music ─ lowpass ─ mood ─ bus ┼─ master ─ out
-(Stage 2+: beat bus, vocal bus, monitor)
+ui bus ──────────────────────────┐
+music ─ lowpass ─ mood ─ duck ─ bus ┼─ master ─ out
+beat bus (previews, later the Play transport) ┘
+(Stage 3+: vocal bus, monitor)
 ```
 
 - Components request sounds **by meaning** (`audio.play('confirm')`). `audio/sounds.ts` maps each meaning to a synth recipe or an audio file.
@@ -61,10 +65,34 @@ music ─ lowpass ─ mood ─ bus ┼─ master ─ out
 ## Settings
 `settings/settings.ts` is a tiny persisted store (localStorage, sanitised on load, safe if storage is blocked), read through `useSettings()` in React or `subscribe()` in modules. Later stages add fields there.
 
+## Beat library (Stage 2)
+`storage/beatLibrary.ts` is the only thing that touches stored beats:
+
+```ts
+getSavedBeats(): Promise<SavedBeat[]>     // newest first, audio blob + grid included
+listBeats(): Promise<BeatMeta[]>          // metadata only (lists)
+getBeat(id) / getBeatAudio(id)
+saveBeat(newBeat) / updateBeat(id, patch) / deleteBeat(id)
+subscribeBeats(fn)                        // fires on changes, across tabs too
+```
+
+`SavedBeat` = `BeatMeta` (id, name, fileName, mimeType, sizeBytes, durationSec, bpm, bpmSource, bpmConfidence, introOffset, introOffsetSource, beatsPerBar, peaks, createdAt, updatedAt) plus `blob`, `secondsPerBeat`, `secondsPerBar`, `barCount`.
+
+- **IndexedDB:** two stores, `beats` (metadata + ~1600 waveform peaks) and `beatAudio` (the original file blob), so listing never loads audio. `navigator.storage.persist()` is requested on the first save.
+- **Grid:** `domain/beatGrid.ts`: `gridFor`, `barStart`, `barTimes`, `beatTimes`. A constant tempo from `introOffset`, 4/4 by default. Play mode asks for "bars 5–6" with `barStart(grid, offset, 4)` … `barStart(grid, offset, 6)`.
+- **Analysis:** `audio/analysis/analyseBeat.ts` decodes with an `OfflineAudioContext` (no gesture needed), computes peaks, then runs `tempo.ts` in a worker:
+  - an onset envelope from a kick band and a hi band
+  - candidate BPMs scored by autocorrelation at 1–16 beats, with a mild prior around 90
+  - refinement at repeats up to 32 beats
+  - bar 1 taken from the kick phase
+  
+  It's honest about half/double-time and returns alternatives.
+- **Playback:** `audio/BeatPlayer.ts` is a singleton, so starting any beat stops the previous one. `play(beat, { from, to })` gives the exact-range playback Stage 3 needs for "preview these two bars". It decodes lazily, caches up to 4 decoded beats, and ducks the menu music while playing.
+
 ## How later stages slot in
 | Stage | Where it goes |
 | --- | --- |
-| 2 Beats | `storage/beatStore.ts` (IndexedDB blobs + metadata), `audio/analysis/` (decode, peaks, BPM, grid), `views/BeatsView` |
+| 2 Beats ✅ | `storage/beatLibrary.ts`, `audio/analysis/`, `audio/BeatPlayer.ts`, `domain/beatGrid.ts`, `views/BeatsView` + `components/beats/` |
 | 3 Play | `audio/recorder.ts` (getUserMedia + worklet), `audio/transport.ts` (beat playback from bar N, count-in), `session/` store, `views/play/*` |
 | 4 AI | `services/ai/httpProvider.ts` → **our own server route** holding the key; `scoring/` combines lyric judgements with client-measured `AudioFeatures`; judging + rank reveal views |
 | 5 Song | `export/mixdown.ts` (OfflineAudioContext: beat + takes at `Take.beatStartSec`), results views |

@@ -282,3 +282,61 @@
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Icon buttons ── */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-1);
+  color: var(--text-3);
+  transition:
+    color var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+.icon-btn:hover {
+  color: var(--text-1);
+  background: rgb(var(--glow) / 0.12);
+}
+.icon-btn:active {
+  transform: scale(0.92);
+}
+.icon-btn--danger:hover {
+  color: var(--danger);
+  background: rgb(255 93 122 / 0.1);
+}
+
+.btn--danger {
+  color: #fff;
+  background: linear-gradient(180deg, #e2445f, #b8304a);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.2) inset,
+    0 10px 24px -12px rgb(255 93 122 / 0.8);
+}
+.btn--danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23bb9aff' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  cursor: pointer;
+}
+.select option {
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.input--fake.input--link {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--dur-2);
+}
+.input--fake.input--link:hover {
+  color: var(--text-1);
+}

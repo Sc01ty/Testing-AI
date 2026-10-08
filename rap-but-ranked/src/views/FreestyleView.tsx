@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { PageShell } from '../components/layout/PageShell'
+import { BeatSelect } from '../components/beats/BeatSelect'
 import { Button, Panel, Segmented } from '../components/ui/ui'
 import { audio } from '../audio/AudioEngine'
 import type { FreestyleDifficulty, FreestyleDuration } from '../domain/types'
@@ -48,6 +49,9 @@ export function FreestyleView() {
                 </button>
               ))}
             </div>
+          </Panel>
+          <Panel title="Beat" i={4}>
+            <BeatSelect />
           </Panel>
           <Panel title="Duration" i={4}>
             <Segmented<FreestyleDuration>

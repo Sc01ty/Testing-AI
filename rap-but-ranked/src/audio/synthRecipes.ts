@@ -138,3 +138,17 @@ export const impactBig: SynthRecipe = (ctx, out, t) => {
   noiseBurst(ctx, out, t, { type: 'lowpass', from: 2400, to: 200, peak: 0.07, attack: 0.002, decay: 0.45 })
   ;[784, 1175].forEach((f, i) => tone(ctx, out, t + 0.03 + i * 0.04, { from: f, peak: 0.01, attack: 0.05, decay: 0.9 }))
 }
+
+/** Beat saved: bright, rising two-step with a soft body. */
+export const save: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { from: 110, to: 60, glide: 0.1, peak: 0.16, decay: 0.14 })
+  tone(ctx, out, t, { type: 'triangle', from: 659, peak: 0.06, decay: 0.14, lowpass: 2600 })
+  tone(ctx, out, t + 0.07, { type: 'triangle', from: 988, peak: 0.06, decay: 0.18, lowpass: 3000 })
+  tone(ctx, out, t + 0.14, { type: 'triangle', from: 1319, peak: 0.045, decay: 0.32, lowpass: 3600 })
+}
+
+/** Beat deleted: soft downward thud, not alarming. */
+export const remove: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { type: 'triangle', from: 330, to: 140, glide: 0.18, peak: 0.07, decay: 0.2, lowpass: 1200 })
+  noiseBurst(ctx, out, t, { type: 'lowpass', from: 1800, to: 300, peak: 0.03, attack: 0.005, decay: 0.2 })
+}

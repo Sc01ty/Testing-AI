@@ -19,6 +19,8 @@ export type UiSoundId =
   | 'impact'
   | 'swish'
   | 'impactBig'
+  | 'save'
+  | 'remove'
 
 export type SoundSource =
   | { kind: 'synth'; recipe: SynthRecipe; gain?: number }
@@ -43,6 +45,9 @@ export const UI_SOUNDS: Record<UiSoundId, SoundDef> = {
   impact: { source: { kind: 'synth', recipe: synth.impact }, minIntervalMs: 300 },
   swish: { source: { kind: 'synth', recipe: synth.swish }, minIntervalMs: 200 },
   impactBig: { source: { kind: 'synth', recipe: synth.impactBig }, minIntervalMs: 500 },
+  // beat library
+  save: { source: { kind: 'synth', recipe: synth.save }, minIntervalMs: 300 },
+  remove: { source: { kind: 'synth', recipe: synth.remove }, minIntervalMs: 300 },
 }
 
 

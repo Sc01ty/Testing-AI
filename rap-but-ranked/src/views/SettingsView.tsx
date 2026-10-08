@@ -46,6 +46,9 @@ export function SettingsView() {
           <Row label="Music" sub="Menu theme" i={6}>
             <Slider label="Music volume" value={s.musicVolume} onChange={(v) => set({ musicVolume: v })} />
           </Row>
+          <Row label="Beats" sub="Beat previews and playback" i={7}>
+            <Slider label="Beats volume" value={s.beatVolume} onChange={(v) => set({ beatVolume: v })} />
+          </Row>
           <Row label="Menu music" i={7}>
             <Toggle label="Menu music" checked={s.menuMusic} onChange={(v) => set({ menuMusic: v })} />
           </Row>

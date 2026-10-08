@@ -55,11 +55,12 @@ export function MenuView({ from }: { from: RouteId | null }) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const timers = useRef<number[]>([])
 
-  const showMenu = useCallback(() => {
+  /** `skipped`: the user clicked/pressed to skip — swallow the rest of that gesture. */
+  const showMenu = useCallback((skipped = false) => {
     timers.current.forEach(clearTimeout)
     timers.current = [window.setTimeout(() => setOverlay(false), OVERLAY_FADE)]
     introDone = true
-    menuShownAt.current = performance.now()
+    menuShownAt.current = skipped ? performance.now() : 0
     setPhase('menu')
   }, [])
 
@@ -75,7 +76,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
       at(170, () => audio.play('impact'))
       at(560, () => audio.play('swish'))
       at(1060, () => audio.play('impactBig'))
-      at(MENU_AT, showMenu)
+      at(MENU_AT, () => showMenu())
     })
     return () => {
       cancelled = true
@@ -99,7 +100,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
     if (phase === 'menu') return
     const skip = (e: Event) => {
       if (e instanceof KeyboardEvent && (e.repeat || e.metaKey || e.ctrlKey || e.altKey)) return
-      showMenu()
+      showMenu(true)
     }
     window.addEventListener('keydown', skip)
     window.addEventListener('pointerdown', skip)
