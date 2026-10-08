@@ -15,6 +15,12 @@ export interface Settings {
   muted: boolean
   menuMusic: boolean
   motion: MotionPreference
+  /** Preferred microphone (empty = system default). */
+  micDeviceId: string
+  /** Manual latency fine-tune added to the automatic estimate (ms). */
+  latencyOffsetMs: number
+  /** 'local' = in-browser AI model when available, 'basic' = rule-based director only. */
+  aiMode: 'local' | 'basic'
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -25,6 +31,9 @@ export const DEFAULT_SETTINGS: Settings = {
   muted: false,
   menuMusic: true,
   motion: 'system',
+  micDeviceId: '',
+  latencyOffsetMs: 0,
+  aiMode: 'local',
 }
 
 const STORAGE_KEY = 'rbr.settings.v1'
@@ -43,6 +52,10 @@ export function sanitizeSettings(raw: unknown): Settings {
     muted: typeof r.muted === 'boolean' ? r.muted : d.muted,
     menuMusic: typeof r.menuMusic === 'boolean' ? r.menuMusic : d.menuMusic,
     motion: r.motion === 'reduced' || r.motion === 'full' || r.motion === 'system' ? r.motion : d.motion,
+    micDeviceId: typeof r.micDeviceId === 'string' ? r.micDeviceId : d.micDeviceId,
+    latencyOffsetMs:
+      typeof r.latencyOffsetMs === 'number' && Number.isFinite(r.latencyOffsetMs) ? Math.max(-300, Math.min(300, Math.round(r.latencyOffsetMs))) : d.latencyOffsetMs,
+    aiMode: r.aiMode === 'basic' || r.aiMode === 'local' ? r.aiMode : d.aiMode,
   }
 }
 

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { audio } from './AudioEngine'
 import { decodeAudio } from './analysis/analyseBeat'
+import { trackPlayer } from './trackPlayer'
 
 /**
  * The one place beats are played. Starting any beat stops whatever was
@@ -72,6 +73,7 @@ class BeatPlayer {
 
   async play(beat: PlayableBeat, opts: { from?: number; to?: number } = {}) {
     audio.unlock()
+    trackPlayer.stop()
     const token = ++this.token
     const sameBeat = this.state.beatId === beat.id
     this.stopSource()
@@ -157,6 +159,11 @@ class BeatPlayer {
     if (wasPlaying) audio.setMusicDucked(false)
   }
 
+  /** Decoded audio for a beat (cached) — the Play transport schedules it itself. */
+  loadBuffer(beat: PlayableBeat): Promise<AudioBuffer> {
+    return this.load(beat)
+  }
+
   /** Drop a cached decode (beat deleted, or a draft discarded). */
   forget(beatId: string) {
     if (this.state.beatId === beatId) this.stop()
@@ -210,6 +217,7 @@ class BeatPlayer {
 }
 
 export const beatPlayer = new BeatPlayer()
+trackPlayer.onStart = () => beatPlayer.stop()
 
 export function useBeatPlayer(): BeatPlayerState {
   return useSyncExternalStore(beatPlayer.subscribe, beatPlayer.getState, beatPlayer.getState)

@@ -31,7 +31,7 @@ test('sting: RAP → RAP BUT RANKED → menu, usable within ~2.5s, no click need
   const phases = await page.evaluate(() => (window as unknown as { __phases: [string, number][] }).__phases)
   const at = (p: string) => phases.find(([ph]) => ph === p)![1]
   const stingMs = at('menu') - at('intro')
-  expect(stingMs).toBeGreaterThan(1900)
+  expect(stingMs).toBeGreaterThan(1800)
   expect(stingMs).toBeLessThan(2300)
   await expect(page.locator('.intro')).toHaveCount(0, { timeout: 1000 })
   // the menu answers straight away

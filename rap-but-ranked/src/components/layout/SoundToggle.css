@@ -59,3 +59,8 @@
     top: 12px;
   }
 }
+
+:root[data-help-open] .sound-toggle {
+  opacity: 0;
+  pointer-events: none;
+}

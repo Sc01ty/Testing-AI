@@ -99,6 +99,22 @@ test('WAV via drag-and-drop anywhere on the page, manual BPM override', async ({
   await expect(page.locator('.beat-row', { hasText: '141.6' })).toBeVisible()
 })
 
+test('dropping a file on the page title (not the library box) still adds it', async ({ page }) => {
+  await openLibrary(page)
+  const bytes = readFileSync(MP3)
+  const dt = await page.evaluateHandle((data) => {
+    const d = new DataTransfer()
+    d.items.add(new File([new Uint8Array(data)], 'title-drop.mp3', { type: 'audio/mpeg' }))
+    return d
+  }, Array.from(bytes))
+  const title = page.locator('h1.page__title')
+  await title.dispatchEvent('dragenter', { dataTransfer: dt })
+  await expect(page.getByText('Drop to add beat')).toBeVisible()
+  await title.dispatchEvent('drop', { dataTransfer: dt })
+  await expect(page.locator('.beat-editor')).toBeVisible({ timeout: 15000 })
+  await expect(page.getByLabel('Beat name')).toHaveValue('title-drop')
+})
+
 test('tap tempo sets BPM', async ({ page }) => {
   await openLibrary(page)
   await upload(page, MP3)
@@ -188,6 +204,8 @@ test('edit name / BPM / offset and delete with confirmation', async ({ page }) =
   await page.getByRole('button', { name: 'BPM up' }).click()
   await page.getByRole('button', { name: '0:00' }).click()
   await page.getByRole('button', { name: 'Save changes' }).click()
+  // the editor closes once the write has committed
+  await expect(page.locator('.beat-editor')).toHaveCount(0)
   await page.reload()
   const renamed = page.locator('.beat-row', { hasText: 'Renamed' })
   await expect(renamed).toContainText('93')
@@ -214,7 +232,7 @@ test('Play and Freestyle can see saved beats', async ({ page }) => {
   await page.getByRole('button', { name: 'Save beat' }).click()
   await expect(page.locator('.beat-row')).toHaveCount(1)
   await page.goto('/#/play')
-  await expect(page.getByLabel('Beat')).toContainText('For Play · 92 BPM · 0:28')
+  await expect(page.getByLabel('Beat', { exact: true })).toContainText('For Play · 92 BPM · 0:28')
   await page.goto('/#/freestyle')
-  await expect(page.getByLabel('Beat')).toContainText('For Play')
+  await expect(page.getByLabel('Beat', { exact: true })).toContainText('For Play')
 })

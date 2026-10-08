@@ -13,8 +13,6 @@ import { deleteBeat, getBeat, getBeatAudio, updateBeat } from '../storage/beatLi
 import { useBeats } from '../storage/useBeats'
 import '../components/beats/beats.css'
 
-const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
-
 export function BeatsView() {
   const { beats, error } = useBeats()
   const [adding, setAdding] = useState<{ file: File | null; key: number } | null>(null)
@@ -26,14 +24,41 @@ export function BeatsView() {
   // one player for the whole app: leaving the library stops the preview
   useEffect(() => () => beatPlayer.stop(), [])
 
-  // a file dropped anywhere shouldn't make the browser navigate to it
+  // The whole screen is a drop target (title, empty space, list — anywhere),
+  // and a dropped file never makes the browser navigate away to it.
+  const addingRef = useRef(adding)
+  addingRef.current = adding
   useEffect(() => {
-    const stop = (e: Event) => e.preventDefault()
-    window.addEventListener('dragover', stop)
-    window.addEventListener('drop', stop)
+    const isFileDrag = (e: DragEvent | globalThis.DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const enter = (e: globalThis.DragEvent) => {
+      if (!isFileDrag(e) || addingRef.current) return
+      dragDepth.current++
+      setPageDrag(true)
+    }
+    const leave = () => {
+      dragDepth.current = Math.max(0, dragDepth.current - 1)
+      if (dragDepth.current === 0) setPageDrag(false)
+    }
+    const over = (e: globalThis.DragEvent) => e.preventDefault()
+    const drop = (e: globalThis.DragEvent) => {
+      e.preventDefault()
+      dragDepth.current = 0
+      setPageDrag(false)
+      const file = e.dataTransfer?.files?.[0]
+      if (file && !addingRef.current) {
+        setEditing(null)
+        setAdding({ file, key: Date.now() })
+      }
+    }
+    window.addEventListener('dragenter', enter)
+    window.addEventListener('dragleave', leave)
+    window.addEventListener('dragover', over)
+    window.addEventListener('drop', drop)
     return () => {
-      window.removeEventListener('dragover', stop)
-      window.removeEventListener('drop', stop)
+      window.removeEventListener('dragenter', enter)
+      window.removeEventListener('dragleave', leave)
+      window.removeEventListener('dragover', over)
+      window.removeEventListener('drop', drop)
     }
   }, [])
 
@@ -42,31 +67,12 @@ export function BeatsView() {
     setAdding({ file, key: Date.now() })
   }
 
-  const onPageDragEnter = (e: DragEvent) => {
-    if (!hasFiles(e) || adding) return
-    dragDepth.current++
-    setPageDrag(true)
-  }
-  const onPageDragLeave = () => {
-    dragDepth.current = Math.max(0, dragDepth.current - 1)
-    if (dragDepth.current === 0) setPageDrag(false)
-  }
-  const onPageDrop = (e: DragEvent) => {
-    dragDepth.current = 0
-    setPageDrag(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file && !adding) {
-      e.preventDefault()
-      openAdd(file)
-    }
-  }
-
   const totalBytes = (beats ?? []).reduce((a, b) => a + b.sizeBytes, 0)
   const count = beats?.length ?? 0
 
   return (
     <PageShell id="beats">
-      <div className="library" onDragEnter={onPageDragEnter} onDragLeave={onPageDragLeave} onDrop={onPageDrop}>
+      <div className="library">
         <div className="library__bar enter" style={{ '--i': 3 } as CSSProperties}>
           <span className="eyebrow" data-testid="beat-count">
             {beats === null ? 'Loading…' : `${count} ${count === 1 ? 'beat' : 'beats'}${count ? ` · ${formatBytes(totalBytes)}` : ''}`}

@@ -160,11 +160,11 @@ export function detectTempo(mono: Float32Array, sampleRate: number): TempoResult
     }
   }
 
-  // confidence: how far the winner stands above the typical score
-  const raws = coarse.map((c) => c.raw).sort((a, b) => a - b)
-  const median = raws[Math.floor(raws.length / 2)]
-  const top = raws[raws.length - 1]
-  const confidence = top > 0 ? Math.max(0, Math.min(1, (best.raw - median) / (top - median + 1e-12))) * Math.min(1, (top - median) / (Math.abs(top) + 1e-12)) : 0
+  // confidence: how clearly the winner beats its strongest *unrelated* rival
+  // (half / double readings are the same answer, so they don't count against it)
+  const related = (b: number) => [0.5, 1, 2].some((k) => Math.abs(b / (best.bpm * k) - 1) < 0.04)
+  const rival = coarse.filter((c) => !related(c.bpm)).reduce((m, c) => Math.max(m, c.score), 0)
+  const confidence = best.score > 0 ? Math.max(0, Math.min(1, (best.score - rival) / best.score / 0.35)) : 0
 
   const alternatives = [refined / 2, refined * 2].filter((b) => b >= 50 && b <= 220).map((b) => Math.round(b * 10) / 10)
   const downbeat = findDownbeat(kick, frameRate, refined, soundStart)

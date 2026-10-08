@@ -99,6 +99,6 @@ export async function analyseBeat(file: Blob, onStep: (step: AnalysisStep) => vo
 
 /** "my_beat-final (prod. x).mp3" → "my beat final (prod. x)" */
 export function nameFromFile(fileName: string) {
-  const base = fileName.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s*-\s*/g, ' - ').replace(/\s+/g, ' ').trim()
+  const base = fileName.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s+-\s+/g, ' - ').replace(/\s+/g, ' ').trim()
   return (base || 'Untitled beat').slice(0, 60)
 }

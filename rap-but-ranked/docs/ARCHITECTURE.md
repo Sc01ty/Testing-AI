@@ -17,7 +17,11 @@ src/
     analysis/     decode, waveform peaks, tempo + downbeat detection (worker)
   settings/       persisted settings store + hook
   domain/         types for beats, takes, challenges, scores, ranks; rank thresholds; beat grid maths
-  storage/        IndexedDB wrapper + beat library API (no UI)
+  storage/        IndexedDB wrapper; beat library + sessions/takes APIs (no UI)
+  play/           session rules (pure), take audio cache, full-track build/export
+  scoring/        lyric scores, performance (audio) analysis, round + final results
+  lyrics/         tokenising, syllables, rhyme engine, theme lexicon
+  director/       Director contract, song arc, basic (rule) director, Rap AI (WebLLM) director
   lib/            small helpers (formatting, tap tempo)
   services/ai/    provider-agnostic AIService contract (no implementation yet)
 ```
@@ -89,18 +93,45 @@ subscribeBeats(fn)                        // fires on changes, across tabs too
   It's honest about half/double-time and returns alternatives.
 - **Playback:** `audio/BeatPlayer.ts` is a singleton, so starting any beat stops the previous one. `play(beat, { from, to })` gives the exact-range playback Stage 3 needs for "preview these two bars". It decodes lazily, caches up to 4 decoded beats, and ducks the menu music while playing.
 
+## Play loop
+```
+PlayView ─ setup (PlaySetup) ─ round (RoundStudio) ─ judging (Judging) ─ … ─ TrackComplete
+              │                     │                     │
+        sessionStore           TakeRecorder          scoreRound (sync)
+        (IndexedDB)            + trackPlayer          + director.afterRound (async)
+```
+- **Session state** is `domain/types.ts → Session/Round/TakeMeta/RoundResult`. Rules live in `play/sessionLogic.ts`: the bars a round covers, the lengths allowed, and advance/complete. `useSession` saves every change (lyrics debounced).
+- **Recording** (`audio/recordTake.ts`) schedules a one-bar count-in (clicks + beat), the two bars and a short tail on the AudioContext clock. An AudioWorklet (`recorder.worklet.js`) captures the mic with frame timestamps. Round-trip latency (output + input + the user's fine-tune) is subtracted, so `TakeMeta.beatTimeSec` is the exact beat-file second of the take's first sample. Takes are stored as 16-bit WAV in `takeAudio`.
+- **Playback/mix** (`audio/mix.ts`) uses one scheduler for take playback, full-track playback and the offline WAV export (OfflineAudioContext + a gentle limiter). Quiet takes are gained up to +18 dB.
+- **Scoring** (`scoring/`) is deterministic and explainable: each category returns reasons. Flow is the only audio-based category: onsets from the take vs the 16th-note grid, coverage and gaps.
+- **Director** (`director/`):
+  - `Director.afterRound(ctx)` returns `{ analysis, next, storyDirection }`, and `help(kind, ctx)` returns a string.
+  - `basicDirector` handles hooks (people, themes, details), the arc stage and templates, and never repeats a template.
+  - `llmDirector` gets the focus from `chooseFocus()` and asks the model for JSON (schema-constrained). It validates the answer (an instruction, on-focus, connected, not a repeat, not lyrics) and falls back to the rules.
+  - `localModel` handles WebGPU detection, choosing the f16/f32 build, cache detection, download/load progress and deletion. WebLLM is imported lazily and runs in a worker.
+
+### Why Qwen2.5 1.5B (and not 0.5B)
+Candidates were tested on the same prompts with real song scenarios:
+
+| Model | Result |
+| --- | --- |
+| Qwen2.5 0.5B (290 MB) | Not good enough: frequently generic or nonsensical ("write 2 bars about how my bus works") |
+| Qwen3 0.6B | Generic, and copied the example's wording into unrelated songs |
+| Llama 3.2 1B | Decent, but fell back on one template |
+| Qwen2.5 1.5B (880 MB) | Most specific and varied; still occasionally odd, which is what the validation is for |
+
 ## How later stages slot in
 | Stage | Where it goes |
 | --- | --- |
 | 2 Beats ✅ | `storage/beatLibrary.ts`, `audio/analysis/`, `audio/BeatPlayer.ts`, `domain/beatGrid.ts`, `views/BeatsView` + `components/beats/` |
-| 3 Play | `audio/recorder.ts` (getUserMedia + worklet), `audio/transport.ts` (beat playback from bar N, count-in), `session/` store, `views/play/*` |
-| 4 AI | `services/ai/httpProvider.ts` → **our own server route** holding the key; `scoring/` combines lyric judgements with client-measured `AudioFeatures`; judging + rank reveal views |
-| 5 Song | `export/mixdown.ts` (OfflineAudioContext: beat + takes at `Take.beatStartSec`), results views |
+| 3–5 Play ✅ | `audio/recordTake.ts`, `audio/mix.ts`, `audio/trackPlayer.ts`, `play/`, `scoring/`, `director/`, `components/play/` |
+| Later: server AI | add a `Director` implementation that calls our own server route (the key stays on the server); `currentDirector()` picks it |
 | 6 Freestyle | `views/freestyle/*` reusing transport, recorder and AI service |
 | 7 | device selection, latency calibration, deployment workflow |
 
 ### AI rules baked into the contract
-- `AIService` is an interface, so providers can be swapped without touching the UI.
-- API keys never ship to the browser or the repo. The HTTP provider will call a backend route.
+- `Director` (`src/director/types.ts`) is an interface: the basic rule-based director and the local in-browser model both implement it, so a server-backed provider can be added later without touching the UI.
+- API keys never ship to the browser or the repo. Any future hosted model must sit behind a backend route.
+- The local model's output is validated (must ask for 2 bars, stay on focus, connect to the song); anything invalid falls back to the basic director.
 - A score category is only produced when there is a real input for it (`CategoryScore.basis`). Timing comes from measured audio features, never from guessing on lyric text.
 - Help may teach, explain and hint, but it doesn't write the bars by default.

@@ -1,6 +1,10 @@
 import type { CSSProperties } from 'react'
 import { audio } from '../audio/AudioEngine'
 import { useAudioUnlocked } from '../audio/useAudio'
+import { mic, useMic } from '../audio/mic'
+import { AiStatus } from '../components/play/AiStatus'
+import { MODEL_SIZE_MB, localModel, useLocalModel } from '../director/localModel'
+import { useEffect, useState } from 'react'
 import { router } from '../app/router'
 import { PageShell } from '../components/layout/PageShell'
 import { Button, Panel, Segmented, Slider, StageLock, Toggle } from '../components/ui/ui'
@@ -9,11 +13,9 @@ import { useSettings } from '../settings/useSettings'
 import { requestIntroReplay } from './MenuView'
 import './views.css'
 
-/** Things that genuinely work now, then honest previews of what's coming. */
+/** Not built yet — listed honestly rather than shown as fake controls. */
 const LATER: { title: string; stage: number; items: string[] }[] = [
-  { title: 'Audio devices', stage: 7, items: ['Microphone input', 'Output device (where the browser allows it)', 'Mic level meter', 'Latency calibration', 'Headphone test'] },
-  { title: 'Recording', stage: 3, items: ['Count-in length', 'Auto-stop after 2 bars', 'Monitoring', 'Waveform sensitivity'] },
-  { title: 'AI judge', stage: 4, items: ['Scoring strictness', 'Feedback detail', 'Challenge difficulty'] },
+  { title: 'Later', stage: 7, items: ['Output device picker', 'Automatic latency calibration', 'Scoring strictness', 'Count-in length'] },
 ]
 
 function Row({ label, sub, children, i }: { label: string; sub?: string; children: React.ReactNode; i: number }) {
@@ -58,6 +60,12 @@ export function SettingsView() {
         </Panel>
 
         <div className="settings-side">
+          <Panel title="Microphone" i={4}>
+            <MicSettings />
+          </Panel>
+          <Panel title="Rap AI" i={4}>
+            <AiSettings />
+          </Panel>
           <Panel title="Motion" i={4}>
             <Row label="Reduced motion" sub="System follows your OS setting" i={5}>
               <Segmented<MotionPreference>
@@ -97,5 +105,89 @@ export function SettingsView() {
         </div>
       </div>
     </PageShell>
+  )
+}
+
+function MicSettings() {
+  const [s, set] = useSettings()
+  const m = useMic()
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+  const refresh = () =>
+    void navigator.mediaDevices
+      ?.enumerateDevices()
+      .then((d) => setDevices(d.filter((x) => x.kind === 'audioinput')))
+      .catch(() => setDevices([]))
+  useEffect(refresh, [m.status])
+  const labelled = devices.some((d) => d.label)
+  return (
+    <>
+      <Row label="Input" sub={m.status === 'ready' ? `Using: ${m.deviceLabel}` : m.message ?? 'Turns on the first time you record'} i={5}>
+        {labelled ? (
+          <select
+            className="input select"
+            aria-label="Microphone"
+            value={s.micDeviceId}
+            onChange={(e) => {
+              set({ micDeviceId: e.target.value })
+              mic.release()
+            }}
+          >
+            <option value="">System default</option>
+            {devices.map((d) => (
+              <option key={d.deviceId} value={d.deviceId}>
+                {d.label || 'Microphone'}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Button variant="ghost" onClick={() => void mic.ensure().then(refresh)}>
+            Allow mic
+          </Button>
+        )}
+      </Row>
+      <Row label="Timing fine-tune" sub={`${s.latencyOffsetMs > 0 ? '+' : ''}${s.latencyOffsetMs} ms · if your takes sound late, move this up; early, move it down`} i={6}>
+        <input
+          className="latency"
+          type="range"
+          min={-150}
+          max={150}
+          step={5}
+          aria-label="Latency fine-tune"
+          value={s.latencyOffsetMs}
+          onChange={(e) => set({ latencyOffsetMs: Number(e.target.value) })}
+        />
+      </Row>
+    </>
+  )
+}
+
+function AiSettings() {
+  const [s, set] = useSettings()
+  const m = useLocalModel()
+  useEffect(() => void localModel.detect(), [])
+  return (
+    <>
+      <Row label="Director" sub="Who decides your next challenge" i={5}>
+        <Segmented<'local' | 'basic'>
+          label="Director"
+          value={s.aiMode}
+          onChange={(v) => set({ aiMode: v })}
+          options={[
+            { value: 'local', label: 'Rap AI', disabled: m.status === 'unsupported' },
+            { value: 'basic', label: 'Basic' },
+          ]}
+        />
+      </Row>
+      <div className="setting setting--block enter" style={{ '--i': 6 } as CSSProperties}>
+        <AiStatus />
+      </div>
+      {(m.status === 'ready' || m.status === 'cached') && (
+        <Row label="Downloaded model" sub={`Frees ~${MODEL_SIZE_MB} MB. You can download it again any time.`} i={7}>
+          <Button variant="ghost" clickSound="back" onClick={() => void localModel.remove()}>
+            Delete
+          </Button>
+        </Row>
+      )}
+    </>
   )
 }

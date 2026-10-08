@@ -235,7 +235,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
         </span>
       </div>
       <div className="title__chrome title__chrome--br" aria-hidden={!inMenu}>
-        <span className="eyebrow">Stage 1 · v0.1</span>
+        <span className="eyebrow">Core loop · v0.5</span>
       </div>
     </div>
   )

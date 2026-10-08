@@ -338,3 +338,11 @@
     padding: 18px;
   }
 }
+
+.setting--block {
+  display: block;
+}
+.latency {
+  width: 100%;
+  accent-color: var(--purple-400);
+}

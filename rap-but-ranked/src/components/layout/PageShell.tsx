@@ -10,7 +10,7 @@ import './PageShell.css'
  * Frame for every non-menu screen. The brand mark and the title share
  * view-transition names with the menu, so they morph rather than cut.
  */
-export function PageShell({ id, children, side }: { id: RouteId; children: ReactNode; side?: ReactNode }) {
+export function PageShell({ id, children, side, compact = false }: { id: RouteId; children: ReactNode; side?: ReactNode; compact?: boolean }) {
   const meta = MENU_ROUTES.find((r) => r.id === id)!
   const index = MENU_ROUTES.indexOf(meta)
 
@@ -36,7 +36,7 @@ export function PageShell({ id, children, side }: { id: RouteId; children: React
   }, [])
 
   return (
-    <div className={`page screen page--${id}`}>
+    <div className={`page screen page--${id}${compact ? ' page--compact' : ''}`}>
       <header className="page__bar">
         <button className="page__brand" style={{ viewTransitionName: 'brand' } as CSSProperties} onClick={back} aria-label="Back to menu">
           <Logo size="sm" />
@@ -60,9 +60,11 @@ export function PageShell({ id, children, side }: { id: RouteId; children: React
             {meta.stage > BUILT_STAGE && id !== 'settings' ? <StageLock stage={meta.stage}>Opens in stage {meta.stage}</StageLock> : side}
           </span>
         </div>
-        <p className="page__tagline enter" style={{ '--i': 1 } as CSSProperties}>
-          {meta.tagline}
-        </p>
+        {!compact && (
+          <p className="page__tagline enter" style={{ '--i': 1 } as CSSProperties}>
+            {meta.tagline}
+          </p>
+        )}
       </div>
 
       <main className="page__body">{children}</main>

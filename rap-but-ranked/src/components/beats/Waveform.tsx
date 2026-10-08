@@ -25,6 +25,12 @@ export interface WaveformProps {
   onSeek?: (seconds: number) => void
   onOffsetChange?: (seconds: number) => void
   reveal?: boolean
+  /** Shade a region (seconds within this waveform), e.g. the two bars being recorded. */
+  highlight?: [number, number]
+  /** Number shown on the first grid bar (zoomed views start mid-song). */
+  barNumberStart?: number
+  /** Grey out audio before `offset` (the intro). Default true. */
+  dimIntro?: boolean
   label: string
   className?: string
 }
@@ -56,6 +62,9 @@ export function Waveform({
   onSeek,
   onOffsetChange,
   reveal = false,
+  highlight,
+  barNumberStart = 1,
+  dimIntro = true,
   label,
   className = '',
 }: WaveformProps) {
@@ -99,6 +108,16 @@ export function Waveform({
     const waveH = H - labelTop
     const mid = waveTop + waveH / 2
 
+    if (highlight) {
+      const x0 = toX(highlight[0])
+      const x1 = toX(highlight[1])
+      g.fillStyle = 'rgba(123, 69, 240, 0.13)'
+      g.fillRect(x0, waveTop, x1 - x0, waveH)
+      g.fillStyle = 'rgba(187, 154, 255, 0.55)'
+      g.fillRect(Math.round(x0), waveTop, 1, waveH)
+      g.fillRect(Math.round(x1) - 1, waveTop, 1, waveH)
+    }
+
     // bar grid
     if (bpm && bpm > 0 && duration > 0) {
       const spBar = (60 / bpm) * beatsPerBar
@@ -114,7 +133,7 @@ export function Waveform({
         g.fillRect(x, waveTop, 1, waveH)
         if (barNumbers && i % labelEvery === 0) {
           g.fillStyle = COLORS.label
-          g.fillText(String(i + 1), x + 3, 1)
+          g.fillText(String(i + barNumberStart), x + 3, 1)
         }
       }
     }
@@ -132,7 +151,7 @@ export function Waveform({
     for (let i = 0; i < n; i++) {
       const x = i * step
       const h = Math.max(1.5, cols[i] * waveH * 0.92)
-      g.fillStyle = x + barWidth <= posX ? played : x < offX ? COLORS.intro : COLORS.unplayed
+      g.fillStyle = x + barWidth <= posX ? played : dimIntro && x < offX ? COLORS.intro : COLORS.unplayed
       g.fillRect(x, mid - h / 2, barWidth, h)
     }
 
@@ -164,7 +183,7 @@ export function Waveform({
       g.fillRect(Math.round(posX), waveTop - (barNumbers ? 2 : 0), 1.5, waveH + (barNumbers ? 2 : 0))
       g.restore()
     }
-  }, [height, labelTop, duration, bpm, beatsPerBar, offset, barNumbers, barWidth, gap, columnPeaks, position, onOffsetChange, onSeek])
+  }, [height, labelTop, duration, bpm, beatsPerBar, offset, barNumbers, barWidth, gap, columnPeaks, position, onOffsetChange, onSeek, highlight, barNumberStart, dimIntro])
 
   // redraw whenever inputs change
   useEffect(() => {

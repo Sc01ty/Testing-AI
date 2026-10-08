@@ -11,8 +11,11 @@ export function BeatSelect({ value, onChange }: { value?: string; onChange?: (id
   const { beats } = useBeats()
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => {
-    if (!local && beats?.length) setLocal(beats[0].id)
-  }, [beats, local])
+    if (!(value ?? local) && beats?.length) {
+      setLocal(beats[0].id)
+      onChange?.(beats[0].id)
+    }
+  }, [beats, local, value, onChange])
 
   if (beats === null) return <div className="input input--fake">Loading beats…</div>
   if (beats.length === 0)

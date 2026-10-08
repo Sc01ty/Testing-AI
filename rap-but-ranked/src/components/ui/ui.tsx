@@ -80,7 +80,7 @@ export function Segmented<T extends string | number>({
   disabled,
 }: {
   value: T
-  options: { value: T; label: ReactNode }[]
+  options: { value: T; label: ReactNode; disabled?: boolean }[]
   onChange: (v: T) => void
   label: string
   disabled?: boolean
@@ -95,7 +95,7 @@ export function Segmented<T extends string | number>({
           role="radio"
           aria-checked={o.value === value}
           className="seg__opt"
-          disabled={disabled}
+          disabled={disabled || o.disabled}
           onClick={() => {
             audio.unlock()
             if (o.value !== value) {

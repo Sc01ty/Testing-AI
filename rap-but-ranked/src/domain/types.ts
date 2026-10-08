@@ -38,68 +38,88 @@ export interface SavedBeat extends BeatMeta {
   barCount: number
 }
 
-// ── Play sessions (Stage 3–5) ──────────────────────────────────────
+// ── Play sessions ──────────────────────────────────────────────────
 export type TrackLength = 8 | 16 | 32
 export type Rank = 'D' | 'C' | 'B' | 'A' | 'S'
+/** Who wrote a challenge / analysis: the in-browser model or the rule-based director. */
+export type DirectorSource = 'local-ai' | 'basic'
 
 export interface Challenge {
-  id: string
-  index: number // 0-based round number
-  prompt: string // "Write 2 bars about wanting money."
-  barStart: number // first bar this round covers (0-based)
-  barCount: 2
-  /** Why the director chose this (shown subtly / used for continuity). */
-  storyBeat?: string
+  /** "Write 2 bars about what you'd do for your mum if you made it." */
+  prompt: string
+  /** Words the bars should touch — used for prompt-relevance scoring. */
+  focus: string[]
+  /** Short label for where the story is ("family", "the obstacle", "back to the start"). */
+  storyBeat: string
+  source: DirectorSource
 }
 
-/** Everything needed to rebuild the final song over the original beat. */
-export interface Take {
+/** One recorded vocal, with everything needed to place it over the beat again. */
+export interface TakeMeta {
   id: string
-  challengeId: string
   beatId: string
   barStart: number
   barCount: number
-  /** Position in the beat (seconds) where the vocal belongs. */
-  beatStartSec: number
-  /** Offset into the vocal recording where usable audio begins (latency comp). */
-  vocalStartSec: number
+  /** Beat-file second where sample 0 of the stored vocal belongs (latency already compensated). */
+  beatTimeSec: number
+  /** The two bars this take is for, in beat-file seconds. */
+  sectionStartSec: number
+  sectionEndSec: number
   durationSec: number
-  audioKey: string
-  lyrics: [string, string]
+  sampleRate: number
+  /** Latency compensation that was applied (seconds). */
+  latencySec: number
+  /** Loudest sample 0..1 — to warn about a silent or clipping mic. */
+  inputPeak: number
+  peaks: number[]
   recordedAt: number
 }
 
 /** Categories are only scored when the system has a legitimate input for them. */
-export type ScoreCategory = 'rhyme' | 'relevance' | 'storytelling' | 'originality' | 'flow' | 'delivery'
+export type ScoreCategory = 'rhyme' | 'prompt' | 'story' | 'flow' | 'originality'
 
 export interface CategoryScore {
   category: ScoreCategory
+  label: string
   score: number // 0–100
-  /** What produced this number — text analysis, audio timing analysis, etc. */
-  basis: 'lyrics' | 'audio' | 'lyrics+audio'
-  note?: string
+  /** What produced this number. */
+  basis: 'lyrics' | 'audio'
+  /** Plain-English reasons — the score must be explainable. */
+  reasons: string[]
 }
 
 export interface RoundResult {
-  challengeId: string
-  takeId: string
   categories: CategoryScore[]
   score: number
   rank: Rank
-  feedback: string[] // max ~3 short lines
+  /** 1–3 short lines. */
+  feedback: string[]
+  /** One-line read of the bars from the director (AI or basic). */
+  analysis: string
+  scoredAt: number
+}
+
+export interface Round {
+  index: number
+  challenge: Challenge
+  lyrics: [string, string]
+  take: TakeMeta | null
+  result: RoundResult | null
 }
 
 export interface Session {
   id: string
   trackName: string
   beatId: string
+  beatName: string
   startingTopic: string
   length: TrackLength
-  challenges: Challenge[]
-  takes: Take[]
-  results: RoundResult[]
+  rounds: Round[]
+  /** Running one-line summary of where the song's story is heading. */
   storyDirection: string
+  status: 'active' | 'complete'
   createdAt: number
+  updatedAt: number
 }
 
 // ── Freestyle (Stage 6) ────────────────────────────────────────────
