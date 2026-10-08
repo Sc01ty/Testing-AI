@@ -232,6 +232,7 @@ test('Play and Freestyle can see saved beats', async ({ page }) => {
   await page.getByRole('button', { name: 'Save beat' }).click()
   await expect(page.locator('.beat-row')).toHaveCount(1)
   await page.goto('/#/play')
+  await page.locator('.modes__item', { hasText: 'SINGLEPLAYER' }).click()
   await page.locator('.modes__item', { hasText: 'PLAY' }).click()
   await expect(page.getByLabel('Beat', { exact: true })).toContainText('For Play · 92 BPM · 0:28')
   await page.goto('/#/freestyle')

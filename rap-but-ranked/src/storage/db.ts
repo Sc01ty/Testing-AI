@@ -3,9 +3,10 @@
  * added here as features need them: beats, play sessions, vocal takes, freestyles.
  */
 const DB_NAME = 'rap-but-ranked'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const STORES = {
+  multiplayer: 'multiplayer',
   beats: 'beats', // BeatMeta, keyPath id
   beatAudio: 'beatAudio', // { id, blob }, keyPath id
   sessions: 'sessions', // Session, keyPath id
@@ -22,6 +23,7 @@ export function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION)
     req.onupgradeneeded = () => {
       const db = req.result
+      if (!db.objectStoreNames.contains(STORES.multiplayer)) db.createObjectStore(STORES.multiplayer, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.beats)) {
         db.createObjectStore(STORES.beats, { keyPath: 'id' }).createIndex('createdAt', 'createdAt')
       }

@@ -2,6 +2,22 @@
 
 **Write 2 bars. Rap them. Get ranked. Build the song.**
 
+## v0.7 — local duo and freestyle revision
+
+Scotty Systems: https://scottysystems.it.com/rap-but-ranked/ · Creator Tools: https://scottysystems.it.com/tools.html#rap-but-ranked
+
+PLAY now opens **SINGLEPLAYER / MULTIPLAYER**. Singleplayer keeps its existing Play/Improve loop. Multiplayer is two people on one computer: name both players, choose a beat/topic/length, then Standard (4 bars each) or Quick Trade (2 bars each). Prepare each section in order; the basic or optional local AI director sees both players' lyrics. Once every section is ready, perform the whole track with one count-in and one continuous beat.
+
+Clean handoffs change players at the bar line. Overlap handoffs cue the incoming player one beat early. A shared microphone records both voices in one master, heard once in the mix; it does not separate speakers. Individual performance scores are withheld for turns touching an overlap. Retakes punch into fixed slots and never move later sections; both players must repeat any shared overlap inside the replacement slot. Combined rank averages measured round feedback; story observations cite repeated lyric details rather than adding an invented teamwork number.
+
+Completed duo tracks appear in Saved, with both names, playback and WAV export. Improve can analyse their writing. IndexedDB v4 adds a multiplayer store without rewriting existing singleplayer or freestyle records. A reload restores the open mode/session; returning from the main menu still offers the mode choice.
+
+Freestyle adds Everyday / Personal / Absurd / Mixed categories, a compact challenge queue, mic/beat status, transcript excerpts for prompt hits and **Retry same settings**. Difficulty sets prompt pace; Chaos leaves at least two bars between prompts. Detection uses explicit words, narrow equivalents and a limited financial-context rule, not broad theme membership. Recognition is approximate and happens after recording; missing transcripts omit word categories. Retry keeps category, duration, difficulty and prompt-frequency settings, with a fresh prompt sequence.
+
+Source modules: `src/multiplayer/` for turn plans, storage, continuous capture UI and mixing; existing singleplayer audio remains intact. The optional local model uses its existing WebLLM worker and validated JSON instructions with a labelled basic-director fallback. Live multiplayer inference and real-device latency need human verification; browser recording tests use synthetic microphone audio.
+
+GitHub Pages rebuilds on main pushes. The Scotty Systems domain is a separate deployment: copy `dist/` into the Portfolio's `public/rap-but-ranked/` and use `deploy-tools/Publish-RapButRanked.ps1 -AppOnly`. Upload assets before the app index. No built-in third-party beats are bundled.
+
 The player writes and performs their own lyrics. The app sets challenges, judges what it can honestly measure, ranks each round from D to S, and steers the next two bars so the track turns into a real song. It never writes the bars for the player.
 
 > **Status: core loop playable.** Upload a beat → pick a topic → write 2 bars → preview → record → listen back → submit → get scored → get a next challenge that follows your story → repeat → finish the song, play it back and download it. Freestyle is still a preview.
@@ -15,7 +31,7 @@ First time (Windows Command Prompt, macOS or Linux terminal):
 ```
 git clone https://github.com/Sc01ty/Testing-AI.git
 cd Testing-AI
-git checkout claude/inspiring-curie-wctfxr
+git checkout main
 cd rap-but-ranked
 npm install
 npm run dev

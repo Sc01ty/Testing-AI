@@ -59,13 +59,19 @@ describe('promptHits', () => {
     { word: 'school', bar: 4 },
     { word: 'regret', bar: 8 },
   ]
-  it('counts a prompt used in its window (or a bar after), by word or theme', () => {
+  it('uses explicit equivalents and does not count loose theme associations', () => {
     const words = said(['stacking', 0], ['cash', 1], ['teacher', 5], ['classroom', 9])
     const hits = promptHits(prompts, words, 12, SPBAR)
     expect(hits[0]).toMatchObject({ hit: true }) // cash → money theme
-    expect(hits[0].evidence).toContain('cash')
-    expect(hits[1].hit).toBe(true) // teacher → school theme
+    expect(hits[0].evidence.join(' ')).toContain('cash')
+    expect(hits[1].hit).toBe(false) // teacher alone is too loose; later classroom is outside its window
     expect(hits[2].hit).toBe(false) // classroom isn't regret
+  })
+  it('rejects bank alone and credits a financial phrase with its transcript excerpt',()=>{
+    expect(promptHits([{word:'money',bar:0}],said(['bank',0]),4,SPBAR)[0].hit).toBe(false)
+    const h=promptHits([{word:'money',bar:0}],said(['double',0],['my',0],['bank',0],['balance',0]),4,SPBAR)[0]
+    expect(h.hit).toBe(true);expect(h.evidence[0]).toContain('bank balance')
+    expect(promptHits([{word:'school',bar:0}],said(['teacher',0]),4,SPBAR)[0].hit).toBe(false)
   })
   it("doesn't credit a word said long before its prompt appeared", () => {
     const words = said(['regret', 1])

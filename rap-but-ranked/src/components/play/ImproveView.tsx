@@ -4,6 +4,7 @@ import type { Session } from '../../domain/types'
 import { analyseTrack, type Exercise, type Insight } from '../../improve/analyse'
 import { finalResult } from '../../scoring/round'
 import { listSessions } from '../../storage'
+import { listDuos } from '../../multiplayer/store'
 
 /**
  * IMPROVE — not a chatbot: pick one of your finished tracks and get a
@@ -15,7 +16,8 @@ export function ImproveView({ onPlay }: { onPlay: () => void }) {
   const [pick, setPick] = useState<string | null>(null)
 
   useEffect(() => {
-    void listSessions().then((all) => {
+    void Promise.all([listSessions(),listDuos()]).then(([singles,duos]) => {
+      const all:Session[]=[...singles,...duos.filter(s=>s.status==='complete').map(s=>({id:s.id,trackName:`${s.trackName} · ${s.players.join(' × ')}`,beatId:s.beatId,beatName:s.beatName,beatGrid:s.beatGrid,startingTopic:s.topic,length:s.length,storyDirection:s.storyDirection,status:'complete' as const,createdAt:s.createdAt,updatedAt:s.updatedAt,rounds:s.turns.flatMap(t=>Array.from({length:t.lyrics.length/2},(_,i)=>({index:t.barStart/2+i,lyrics:[t.lyrics[i*2],t.lyrics[i*2+1]] as [string,string],challenge:t.challenge,take:null,result:t.result})))}))]
       const done = all.filter((s) => s.status === 'complete').sort((a, b) => b.createdAt - a.createdAt)
       setTracks(done)
       setPick((p) => p ?? done[0]?.id ?? null)

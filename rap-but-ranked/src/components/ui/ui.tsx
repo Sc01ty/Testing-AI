@@ -93,6 +93,7 @@ export function Segmented<T extends string | number>({
         <button
           key={String(o.value)}
           role="radio"
+          aria-label={typeof o.label === 'string' ? o.label : undefined}
           aria-checked={o.value === value}
           className="seg__opt"
           disabled={disabled || o.disabled}

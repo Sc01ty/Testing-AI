@@ -36,7 +36,7 @@ export function BeatsView() {
         setSavedCount(x.length)
         const m = new Map<string, number>()
         for (const it of x) {
-          const id = it.kind === 'track' ? it.session.beatId : it.freestyle.beatId
+          const id = it.kind === 'track' ? it.session.beatId : it.kind==='multiplayer' ? it.duo.beatId : it.freestyle.beatId
           m.set(id, (m.get(id) ?? 0) + 1)
         }
         setUsage(m)

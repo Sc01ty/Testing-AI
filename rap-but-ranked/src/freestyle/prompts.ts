@@ -1,4 +1,4 @@
-import type { FreestyleDifficulty, FreestylePrompt } from '../domain/types'
+import type { FreestyleCategory, FreestyleDifficulty, FreestylePrompt } from '../domain/types'
 
 /**
  * Freestyle prompt words and when they land.
@@ -34,9 +34,12 @@ export function rng(seed: number) {
  * The prompts for a freestyle of `bars` bars. `every` overrides the
  * difficulty's spacing (Chaos stays unpredictable unless overridden).
  */
-export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed: number, every?: number | null): FreestylePrompt[] {
+export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed: number, every?: number | null, category?: FreestyleCategory): FreestylePrompt[] {
   const rand = rng(seed)
-  const bank = [...new Set(PROMPT_BANKS[difficulty])]
+  const categories = {everyday:EASY,personal:['family','hometown','your mum','your ex','first car','dreams','regret','loyalty','ambition','proving them wrong'],absurd:WEIRD,mixed:PROMPT_BANKS[difficulty]}
+  const concepts:Record<string,string[]>={everyday:['unpaid rent','missed train','empty fridge','school pressure'],personal:['broken trust','fear of failing','leaving home','a promise you broke'],absurd:['a penguin landlord','a microwave election','time travelling pigeons','a haunted gym'],mixed:HARD}
+  const chosen=category ? categories[category] : PROMPT_BANKS[difficulty]
+  const bank = [...new Set(difficulty==='hard' && category ? [...chosen,...concepts[category],...concepts[category]] : difficulty==='chaos' ? [...chosen,...WEIRD] : chosen)]
   const used = new Set<string>()
   const pick = () => {
     if (used.size >= bank.length) used.clear()
@@ -49,7 +52,7 @@ export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed:
   const out: FreestylePrompt[] = []
   for (let bar = 0; bar < bars; ) {
     out.push({ word: pick(), bar })
-    bar += step ?? [1, 2, 2, 3, 4, 6][Math.floor(rand() * 6)]
+    bar += step ?? [2, 2, 3, 4, 6][Math.floor(rand() * 5)]
   }
   return out
 }

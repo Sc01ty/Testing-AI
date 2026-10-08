@@ -8,6 +8,7 @@ import { FreestyleRecorder, type FreestyleRecording } from '../../freestyle/reco
 import { timing } from '../../freestyle/session'
 import { formatTime } from '../../lib/format'
 import { useSettings } from '../../settings/useSettings'
+import { useMic } from '../../audio/mic'
 import { getBeatAudio } from '../../storage'
 import { Icon } from '../beats/icons'
 import { VocalLane } from '../play/VocalLane'
@@ -32,6 +33,7 @@ export function FreestyleLive({
   const [t, setT] = useState(-spBar)
   const [live, setLive] = useState<number[] | null>(null)
   const [settings, setSettings] = useSettings()
+  const mic = useMic()
   const recorder = useRef<FreestyleRecorder | null>(null)
   const playable: PlayableBeat = useMemo(() => ({ id: session.beatId, getBlob: () => getBeatAudio(session.beatId) }), [session.beatId])
 
@@ -118,6 +120,7 @@ export function FreestyleLive({
       </div>
 
       <div className="fs-live__stage" aria-live="polite">
+        <p className="eyebrow">{session.beatName} · {Math.round(session.beatGrid.bpm)} BPM · {session.category ?? 'mixed'} · MIC {mic.status==='ready'?'LIVE':mic.status}</p>
         {count !== null ? (
           <span className="countdown countdown--inline" key={`c${count}`}>
             {count}
@@ -148,6 +151,7 @@ export function FreestyleLive({
           )
         })}
       </div>
+      <div className="fs-queue" aria-label="Challenge progression">{session.prompts.slice(Math.max(0,idx-1),idx+3).map(p=><span key={p.bar} data-active={p.bar===prompt.bar}>{p.bar===prompt.bar?'NOW · ':p.bar<bar?'PASSED · ':'NEXT · '}{chaos && p.bar>bar?'???':p.word}</span>)}</div>
 
       <div className="timeline fs-live__lane" data-recording={phase === 'live' ? '' : undefined}>
         <div className="timeline__lane">

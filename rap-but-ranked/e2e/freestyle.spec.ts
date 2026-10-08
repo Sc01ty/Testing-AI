@@ -33,8 +33,9 @@ async function addBeat(page: Page) {
   await expect(page.locator('.beat-row', { hasText: 'FS Beat' })).toBeVisible()
 }
 
-async function runFreestyle(page: Page, difficulty: string, transcribe: boolean) {
+async function runFreestyle(page: Page, difficulty: string, transcribe: boolean, category = 'Mixed') {
   await page.goto('/#/freestyle')
+  await page.getByRole('radio', { name: category, exact: true }).click()
   await page.getByRole('radio', { name: new RegExp(`^${difficulty}`) }).click()
   await page.getByRole('radio', { name: '30 sec' }).click()
   const t = page.getByRole('switch', { name: 'Transcribe my freestyle' })
@@ -58,7 +59,7 @@ test('freestyle without speech recognition: audio-only scoring, saved, plays bac
   const errors: string[] = []
   page.on('pageerror', (e) => errors.push(String(e)))
   await addBeat(page)
-  await runFreestyle(page, 'Hard', false)
+  await runFreestyle(page, 'Hard', false, 'Personal')
 
   // judged on what the audio shows only — and it says so
   await expect(page.locator('.judging')).toBeVisible({ timeout: 60000 })
@@ -74,12 +75,30 @@ test('freestyle without speech recognition: audio-only scoring, saved, plays bac
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible({ timeout: 10000 })
   await page.getByRole('button', { name: 'Stop' }).click()
 
+  await page.getByRole('button', { name: 'Retry same settings' }).click()
+  await expect(page.locator('.fs-live__word')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('.fs-live__stage')).toContainText('personal')
+  await expect(page.locator('.fs-live')).toHaveAttribute('data-phase','live',{timeout:10000})
+  await page.waitForTimeout(1500)
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect(page.locator('.judging')).toBeVisible({ timeout: 15000 })
+  await page.waitForTimeout(400)
+  await page.keyboard.press('Space')
+  await page.getByRole('button', { name: 'See the breakdown' }).click()
+  const attempts = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>(res=>{const r=indexedDB.open('rap-but-ranked');r.onsuccess=()=>res(r.result)})
+    const rows = await new Promise<{category:string;difficulty:string;requestedDurationSec:number}[]>(res=>{const r=db.transaction('freestyles').objectStore('freestyles').getAll();r.onsuccess=()=>res(r.result)});db.close();return rows
+  })
+  expect(attempts).toHaveLength(2)
+  for(const attempt of attempts) expect(attempt).toMatchObject({category:'personal',difficulty:'hard',requestedDurationSec:30})
+
   // in SAVED, after a refresh
   await page.getByRole('button', { name: /open in BEATS/ }).click()
   await page.reload()
   const row = page.locator('.saved-row', { hasText: 'Hard freestyle' })
-  await expect(row).toBeVisible()
-  await expect(row.locator('.saved-kind')).toHaveText('Freestyle')
+  await expect(row).toHaveCount(2)
+  await expect(row.first()).toBeVisible()
+  await expect(row.first().locator('.saved-kind')).toHaveText('Freestyle')
   expect(errors).toEqual([])
 })
 

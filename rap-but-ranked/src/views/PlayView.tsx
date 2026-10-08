@@ -26,6 +26,7 @@ import { settingsStore } from '../settings/settings'
 import { deleteSession, getBeat, hasCompletedTrack, latestActiveSession, listSessions, onSavedChange, saveSession } from '../storage'
 import '../components/play/play.css'
 import './views.css'
+import { DuoView } from '../multiplayer/DuoView'
 
 /** Remember which session was open, so a refresh drops you straight back in. */
 const OPEN_KEY = 'rbr.openSession'
@@ -66,7 +67,7 @@ interface JudgingState {
   director: DirectorOutput | null
 }
 
-export function PlayView() {
+function SingleplayerView() {
   const [sessionId, setSessionId] = useState<string | null>(readOpen)
   const { session, missing, update } = useSession(sessionId)
   const [beat, setBeat] = useState<SavedBeat | null>(null)
@@ -354,4 +355,25 @@ export function PlayView() {
       <HelpPanel key={round?.index ?? 'done'} open={helpOpen && !!round && !judging} onClose={() => setHelpOpen(false)} input={helpInput} onAssist={recordAssist} />
     </PageShell>
   )
+}
+
+let playResumeConsumed = false
+const resumePlayOnLoad = typeof location !== 'undefined' && location.hash.replace(/^#\/?/,'').split('/')[0]==='play'
+export function PlayView() {
+  const [mode,setModeState]=useState<'single'|'multi'|null>(()=>{
+    const navigation=performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming|undefined
+    if(navigation?.type!=='reload' || !resumePlayOnLoad || playResumeConsumed)return null
+    try{const saved=sessionStorage.getItem('rbr.outerMode');return saved==='single'||saved==='multi'?saved:null}catch{return null}
+  })
+  useEffect(()=>{playResumeConsumed=true},[])
+  const setMode=(next:'single'|'multi'|null)=>{try{if(next)sessionStorage.setItem('rbr.outerMode',next);else sessionStorage.removeItem('rbr.outerMode')}catch{/* local storage unavailable */}setModeState(next)}
+  const [active,setActive]=useState(0)
+  useEffect(()=>{
+    if(mode)return
+    const key=(e:KeyboardEvent)=>{if(['ArrowDown','ArrowUp','w','s'].includes(e.key)){e.preventDefault();setActive(a=>1-a);audio.play('move')}else if(e.key==='Enter' && !(document.activeElement instanceof HTMLButtonElement)){e.preventDefault();audio.play('confirm');setMode(active===0?'single':'multi')}}
+    window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)
+  },[mode,active])
+  if(mode==='single') return <><button className="btn btn--quiet modes__back" onClick={()=>setMode(null)}><span>← Singleplayer / Multiplayer</span></button><SingleplayerView/></>
+  if(mode==='multi') return <PageShell id="play" compact><DuoView onLeave={()=>setMode(null)}/></PageShell>
+  return <PageShell id="play"><div className="modes"><ul className="modes__list">{(['single','multi'] as const).map((m,i)=><li key={m} className="enter" style={{'--i':i+2} as React.CSSProperties}><button className="menu__item modes__item" data-active={active===i?'':undefined} onFocus={()=>setActive(i)} onPointerEnter={()=>{if(active!==i){setActive(i);audio.play('hover')}}} onClick={()=>{audio.unlock();audio.play('confirm');setMode(m)}}><span className="menu__index">0{i+1}</span><span className="menu__label">{m==='single'?'SINGLEPLAYER':'MULTIPLAYER'}</span><span className="menu__tagline">{m==='single'?'Your bars. Your track. Your rank.':'Two players. One beat. Trade the story.'}</span></button></li>)}</ul></div></PageShell>
 }

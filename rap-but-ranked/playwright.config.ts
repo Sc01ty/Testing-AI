@@ -12,6 +12,7 @@ export default defineConfig({
   testDir: 'e2e',
   timeout: 30_000,
   use: {
+    channel: process.platform === 'win32' ? 'msedge' : undefined,
     baseURL: `http://localhost:${port}`,
     viewport: { width: 1440, height: 900 },
     launchOptions: existsSync(localChromium) ? { executablePath: localChromium } : {},

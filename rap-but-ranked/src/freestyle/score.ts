@@ -1,7 +1,6 @@
 import { rankForScore } from '../domain/rank'
 import type { CategoryScore, FreestylePrompt, FreestyleResult, TranscriptWord } from '../domain/types'
 import { STOPWORDS, rhymeStrength, stem, words as splitWords } from '../lyrics/text'
-import { themesOfWord } from '../lyrics/themes'
 import { analysePerformance } from '../scoring/performance'
 
 /**
@@ -44,10 +43,16 @@ export function promptHits(prompts: FreestylePrompt[], words: TranscriptWord[], 
     const to = (endBar + 1) * spBar
     const target = splitWords(p.word).filter((w) => !STOPWORDS.has(w))
     const stems = new Set(target.map(stem))
-    const themes = new Set(target.flatMap(themesOfWord))
-    const said = words.filter((w) => w.start >= from && w.start < to).map((w) => clean(w.text)).filter(Boolean)
-    const evidence = said.filter((w) => stems.has(stem(w)) || themesOfWord(w).some((t) => themes.has(t)))
-    return { word: p.word, bar: p.bar, hit: evidence.length > 0, evidence: [...new Set(evidence)].slice(0, 3) }
+    const inWindow = words.filter((w) => w.start >= from && w.start < to)
+    const said = inWindow.map((w) => clean(w.text)).filter(Boolean)
+    const equivalents:Record<string,string[]>={money:['cash','currency','wealth'],regret:['regretted','regretting','remorse'],school:['school','classroom'],phone:['telephone','smartphone'],car:['automobile'],family:['family'],space:['space','cosmos']}
+    // Every content word of a multiword target needs evidence. Broad theme matches aren't hits.
+    const matched = target.every(w=>said.some(x=>stem(x)===stem(w) || (equivalents[w] ?? []).includes(x)))
+    const bankContext=p.word==='money' && said.includes('bank') && said.some(w=>['double','savings','saving','balance','paid','deposit','account'].includes(w))
+    const hit=(target.length>0 && matched) || bankContext
+    const index=said.findIndex(w=>stems.has(stem(w)) || target.some(t=>(equivalents[t] ?? []).includes(w)) || (bankContext && w==='bank'))
+    const excerpt=hit ? inWindow.slice(Math.max(0,index-5),Math.min(inWindow.length,index+7)).map(w=>w.text).join(' ') : ''
+    return { word: p.word, bar: p.bar, hit, evidence: excerpt ? [excerpt] : [] }
   })
 }
 

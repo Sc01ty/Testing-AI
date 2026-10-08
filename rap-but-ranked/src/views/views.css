@@ -544,3 +544,5 @@
     display: none;
   }
 }
+.fs-queue{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.fs-queue span{padding:12px 18px;border:1px solid rgba(255,255,255,.12);font-size:11px;text-transform:uppercase;letter-spacing:.1em}.fs-queue span[data-active=true]{border-color:#b58cff;color:#b58cff;background:rgba(181,140,255,.08)}.fs-live__stage>.eyebrow{font-size:11px;margin-bottom:22px}.fs-complete .fs-chip{display:flex;flex-direction:column;gap:8px;max-width:320px}.fs-complete .fs-chip small:last-child{line-height:1.7;letter-spacing:0;text-transform:none}.duo-setup .field{display:grid;gap:12px}
+@media(max-width:720px){.page--play .modes__item .menu__label{font-size:clamp(20px,7vw,38px)}}

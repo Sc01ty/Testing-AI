@@ -112,6 +112,7 @@ export function FreestyleComplete({
             <small>bar {p.bar + 1}</small>
             {p.word}
             {r.transcribed && <b>{p.hit ? '✓' : '✗'}</b>}
+            <small>{r.transcribed ? p.hit ? `“${p.evidence.join(' … ')}”` : 'Not detected' : 'Not evaluated'}</small>
           </span>
         ))}
       </section>
@@ -148,8 +149,8 @@ export function FreestyleComplete({
           <span>Download WAV</span>
         </button>
         {onAgain && (
-          <button className="btn btn--ghost" onClick={onAgain}>
-            <span>Go again</span>
+          <button className="btn btn--primary" onClick={onAgain}>
+            <span>Retry same settings</span>
           </button>
         )}
         {onNew && (

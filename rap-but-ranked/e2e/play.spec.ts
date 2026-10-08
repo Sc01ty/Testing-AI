@@ -73,6 +73,7 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
 
   await addBeat(page)
   await page.goto('/#/play')
+  await page.locator('.modes__item', { hasText: 'SINGLEPLAYER' }).click()
   // PLAY / IMPROVE — Improve is locked until a rap is finished
   await page.locator('.modes__item', { hasText: 'IMPROVE' }).click()
   await expect(page.locator('.modes__locked')).toContainText('COMPLETE A RAP FIRST')
@@ -201,6 +202,7 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   await expect(page.locator('.title')).toHaveAttribute('data-phase', 'menu', { timeout: 5000 })
   await page.waitForTimeout(500)
   await page.locator('.menu__item', { hasText: 'PLAY' }).click()
+  await page.locator('.modes__item', { hasText: 'SINGLEPLAYER' }).click()
   await page.locator('.modes__item', { hasText: 'IMPROVE' }).click()
   await expect(page.locator('.improve__track')).toHaveCount(1)
   await expect(page.locator('.improve__section')).toHaveCount(4)

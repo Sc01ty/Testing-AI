@@ -14,6 +14,8 @@ import { Icon } from '../beats/icons'
 import { FreestyleComplete } from '../freestyle/FreestyleComplete'
 import { TrackComplete, type Tab } from '../play/TrackComplete'
 import '../play/play.css'
+import { DuoView } from '../../multiplayer/DuoView'
+import { deleteDuo } from '../../multiplayer/store'
 
 /**
  * BEATS → SAVED: every finished track and scored freestyle, kept on this
@@ -58,7 +60,8 @@ export function SavedShelf({ beats }: { beats: BeatMeta[] | null }) {
   const remove = async (it: SavedItem) => {
     trackPlayer.stop()
     audio.play('back')
-    if (it.kind === 'track') await deleteSession(it.id)
+    if(it.kind==='multiplayer') await deleteDuo(it.id)
+    else if (it.kind === 'track') await deleteSession(it.id)
     else await deleteFreestyle(it.id)
     if (open?.id === it.id) show(null)
   }
@@ -72,7 +75,7 @@ export function SavedShelf({ beats }: { beats: BeatMeta[] | null }) {
         <button className="btn btn--quiet saved-detail__back" onClick={() => (audio.play('back'), show(null))}>
           <span>← All saved</span>
         </button>
-        {current.kind === 'track' ? (
+        {current.kind === 'multiplayer' ? <DuoView initial={current.duo}/> : current.kind === 'track' ? (
           <TrackComplete key={current.id} session={current.session} beat={beatFor(current.session.beatId)} saved initialTab={open.tab} onDelete={() => void remove(current)} />
         ) : (
           <FreestyleComplete key={current.id} f={current.freestyle} beat={beatFor(current.freestyle.beatId)} saved onDelete={() => void remove(current)} />
@@ -100,13 +103,13 @@ export function SavedShelf({ beats }: { beats: BeatMeta[] | null }) {
   return (
     <ul className="saved-list" aria-label="Saved raps">
       {items.map((it, i) => (
-        <SavedRow key={it.id} item={it} index={i} beat={beatFor(it.kind === 'track' ? it.session.beatId : it.freestyle.beatId)} onOpen={(tab) => (audio.play('confirm'), show({ id: it.id, tab }))} onDelete={() => void remove(it)} />
+        it.kind==='multiplayer'?<li key={it.id} className="saved-row"><span className="saved-kind">MULTIPLAYER</span><button className="saved-row__main" onClick={()=>show({id:it.id})}><b>{it.duo.trackName}</b><span className="saved-row__meta">{it.duo.players.join(' × ')} · {it.duo.length} bars · {it.duo.beatName}</span></button><button className="btn btn--quiet" onClick={()=>{if(window.confirm(`Delete ${it.duo.trackName}?`))void remove(it)}}>Delete</button></li>:<SavedRow key={it.id} item={it} index={i} beat={beatFor(it.kind === 'track' ? it.session.beatId : it.freestyle.beatId)} onOpen={(tab) => (audio.play('confirm'), show({ id: it.id, tab }))} onDelete={() => void remove(it)} />
       ))}
     </ul>
   )
 }
 
-function SavedRow({ item, index, beat, onOpen, onDelete }: { item: SavedItem; index: number; beat: BeatMeta | null; onOpen: (tab?: Tab) => void; onDelete: () => void }) {
+function SavedRow({ item, index, beat, onOpen, onDelete }: { item: Exclude<SavedItem,{kind:'multiplayer'}>; index: number; beat: BeatMeta | null; onOpen: (tab?: Tab) => void; onDelete: () => void }) {
   const tp = useTrackPlayer()
   const [busy, setBusy] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -118,7 +121,7 @@ function SavedRow({ item, index, beat, onOpen, onDelete }: { item: SavedItem; in
   const name = isTrack ? item.session.trackName : item.freestyle.name
   const beatName = beat?.name ?? `${isTrack ? item.session.beatName : item.freestyle.beatName} (deleted)`
   const meta = isTrack
-    ? ['Track', `${item.session.length} bars`, beatName, item.session.startingTopic]
+    ? ['Singleplayer', `${item.session.length} bars`, beatName, item.session.startingTopic]
     : ['Freestyle', DIFFICULTY_LABEL[item.freestyle.difficulty], `${item.freestyle.bars} bars`, beatName]
   const date = new Date(item.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 

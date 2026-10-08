@@ -90,6 +90,7 @@ test('4 takes play back as one continuous vocal: no gaps, no doubling, no clicks
 
   await addBeat(page)
   await page.goto('/#/play')
+  await page.locator('.modes__item', { hasText: 'SINGLEPLAYER' }).click()
   await page.locator('.modes__item', { hasText: 'PLAY' }).click()
   await page.getByPlaceholder('Untitled track').fill('Tone Test')
   await page.getByRole('button', { name: 'wanting money', exact: true }).click()
