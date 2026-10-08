@@ -1,3 +1,5 @@
+import type { AssistanceRecord, ChallengeSpec, CoachReport } from '../coach/types'
+
 /**
  * Core domain model for the whole product. Stage 1 only *declares* these so
  * later stages slot in without reshaping the app.
@@ -52,6 +54,8 @@ export interface Challenge {
   /** Short label for where the story is ("family", "the obstacle", "back to the start"). */
   storyBeat: string
   source: DirectorSource
+  /** What this challenge is for (skill, difficulty, constraints) — v2 director. */
+  spec?: ChallengeSpec
 }
 
 /** One recorded vocal, with everything needed to place it over the beat again. */
@@ -76,7 +80,24 @@ export interface TakeMeta {
 }
 
 /** Categories are only scored when the system has a legitimate input for them. */
-export type ScoreCategory = 'rhyme' | 'prompt' | 'story' | 'flow' | 'originality' | 'prompts' | 'continuity' | 'variety'
+export type ScoreCategory =
+  // play rounds (v2): writing dimensions + measured performance
+  | 'meaning'
+  | 'rhyme'
+  | 'cadence'
+  | 'naturalness'
+  | 'structure'
+  | 'originality'
+  | 'wordplay'
+  | 'performance'
+  // older play rounds (v1, kept so saved tracks still read)
+  | 'prompt'
+  | 'story'
+  | 'flow'
+  // freestyle
+  | 'prompts'
+  | 'continuity'
+  | 'variety'
 
 export interface CategoryScore {
   category: ScoreCategory
@@ -90,6 +111,11 @@ export interface CategoryScore {
 
 export interface RoundResult {
   categories: CategoryScore[]
+  /** Writing and measured performance, separately (v2 rounds). */
+  writingScore?: number
+  performanceScore?: number | null
+  /** The coach's structured read of the bars (v2 rounds). */
+  coach?: CoachReport
   score: number
   rank: Rank
   /** 1–3 short lines. */
@@ -105,6 +131,8 @@ export interface Round {
   lyrics: [string, string]
   take: TakeMeta | null
   result: RoundResult | null
+  /** Help used on this round (context, not a penalty). */
+  assistance?: AssistanceRecord[]
 }
 
 /** The beat's timing when the track was made (so it still plays right if the beat is edited or deleted). */

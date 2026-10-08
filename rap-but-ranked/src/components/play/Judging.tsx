@@ -14,6 +14,12 @@ const WORKING: Record<string, string> = {
   story: 'following the story…',
   flow: 'lining your syllables up with the beat…',
   originality: 'checking for clichés…',
+  meaning: 'reading what you actually said…',
+  cadence: 'counting syllables against the bar…',
+  naturalness: 'checking it sounds like a person talking…',
+  structure: 'following the song so far…',
+  wordplay: 'looking for second meanings…',
+  performance: 'lining your syllables up with the beat…',
   prompts: 'finding the prompts in what you said…',
   continuity: 'checking you kept going…',
   variety: 'counting repeats…',
@@ -36,10 +42,11 @@ export function Judging({
   listening,
   after,
   continueLabel,
+  holding = false,
 }: {
   roundNumber?: number
   totalRounds?: number
-  result: { categories: CategoryScore[]; score: number; rank: Rank; feedback: string[] }
+  result: { categories: CategoryScore[]; score: number; rank: Rank; feedback: string[]; writingScore?: number; performanceScore?: number | null; coach?: { engine: 'rules' | 'local-ai'; notes: string[] } }
   directorSource?: DirectorSource
   /** null while the director is still thinking */
   director?: { analysis: string; next: Challenge | null } | null
@@ -51,6 +58,8 @@ export function Judging({
   listening?: string
   after?: ReactNode
   continueLabel?: string
+  /** Hold on "listening" (e.g. while the local model refines the analysis). */
+  holding?: boolean
 }) {
   const cats = result.categories
   const n = cats.length
@@ -63,12 +72,12 @@ export function Judging({
   const timers = useRef<number[]>([])
 
   useEffect(() => {
-    if (stage >= DONE) return
+    if (stage >= DONE || (stage === 0 && holding)) return
     const delay = stage === 0 ? FIRST_MS : stage === n ? 900 : stage === SCORE ? 900 : stage === RANK ? 1100 : STEP_MS
     const t = window.setTimeout(() => setStage((s) => s + 1), delay)
     timers.current.push(t)
     return () => clearTimeout(t)
-  }, [stage, n, SCORE, RANK, DONE])
+  }, [stage, n, SCORE, RANK, DONE, holding])
 
   const verdictRef = useRef<HTMLDivElement>(null)
   const afterRef = useRef<HTMLDivElement>(null)
@@ -134,6 +143,12 @@ export function Judging({
         <div className="verdict__score">
           <span className="eyebrow">{scoreLabel}</span>
           <b>{stage >= SCORE ? <CountUp to={result.score} ms={700} /> : '—'}</b>
+          {stage >= SCORE && result.writingScore !== undefined && (
+            <span className="verdict__split">
+              Writing {result.writingScore}
+              {typeof result.performanceScore === 'number' ? ` · Performance ${result.performanceScore}` : ' · no recording to judge'}
+            </span>
+          )}
         </div>
         <div className={`verdict__rank rank-letter rank-letter--${result.rank}`} data-shown={stage >= RANK ? '' : undefined} aria-label={`Rank ${result.rank}`}>
           {result.rank}
@@ -146,8 +161,14 @@ export function Judging({
             {result.feedback.map((f) => (
               <li key={f}>{f}</li>
             ))}
+            {result.coach?.notes.slice(0, 2).map((n) => (
+              <li key={n} className="feedback__note">
+                {n}
+              </li>
+            ))}
             {director?.analysis && <li className="feedback__story">{director.analysis}</li>}
           </ul>
+          {result.coach && <span className="judging__engine">Analysis: {result.coach.engine === 'local-ai' ? 'Rap AI + rules' : 'rules (deterministic)'}</span>}
           {after}
           {after === undefined && !isLast && roundNumber !== undefined && totalRounds !== undefined && (
             <div className="next" data-ready={director ? '' : undefined}>

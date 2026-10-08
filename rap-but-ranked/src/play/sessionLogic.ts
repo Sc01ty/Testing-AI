@@ -51,19 +51,36 @@ export function lengthsFor(beat: Pick<BeatMeta, 'bpm' | 'introOffset' | 'duratio
   return ([8, 16, 32] as TrackLength[]).filter((n) => n <= barCount)
 }
 
-export function directorContext(s: Session, upToIndex: number): DirectorContext {
+export function directorContext(s: Session, upToIndex: number, extra: Pick<DirectorContext, 'profile' | 'secondsPerBar'> = {}, latestReport?: DirectorContext['rounds'][number]['report']): DirectorContext {
   return {
     topic: s.startingTopic,
     totalRounds: totalRounds(s),
-    rounds: s.rounds.slice(0, upToIndex + 1).map((r) => ({ challenge: r.challenge, lyrics: r.lyrics, score: r.result?.score })),
+    rounds: s.rounds.slice(0, upToIndex + 1).map((r, i) => ({ challenge: r.challenge, lyrics: r.lyrics, score: r.result?.score, report: (i === upToIndex && latestReport) || r.result?.coach })),
     storyDirection: s.storyDirection,
+    secondsPerBar: extra.secondsPerBar ?? (s.beatGrid ? (60 / s.beatGrid.bpm) * s.beatGrid.beatsPerBar : undefined),
+    profile: extra.profile,
+  }
+}
+
+/** Everything the coach needs to judge a round (shared by the rules and the model refine step). */
+export function roundInputs(s: Session, roundIndex: number, take: { samples: Float32Array; sampleRate: number } | null, beat: Pick<BeatMeta, 'bpm' | 'introOffset' | 'durationSec' | 'beatsPerBar'>) {
+  const round = s.rounds[roundIndex]
+  const sec = sectionFor(beat, roundIndex)
+  return {
+    ctx: { lyrics: round.lyrics, challenge: round.challenge, topic: s.startingTopic, previous: s.rounds.slice(0, roundIndex).map((r) => ({ lyrics: r.lyrics, challenge: r.challenge })) },
+    performance:
+      take && round.take
+        ? { samples: take.samples, sampleRate: take.sampleRate, beatTimeSec: round.take.beatTimeSec, sectionStart: sec.start, sectionEnd: sec.end, secondsPerBeat: sec.grid.secondsPerBeat }
+        : null,
+    secondsPerBar: sec.grid.secondsPerBar,
+    assistance: round.assistance,
   }
 }
 
 export function scoreSessionRound(
   s: Session,
   roundIndex: number,
-  take: { samples: Float32Array; sampleRate: number },
+  take: { samples: Float32Array; sampleRate: number } | null,
   beat: Pick<BeatMeta, 'bpm' | 'introOffset' | 'durationSec' | 'beatsPerBar'>,
   analysis: string,
 ) {
@@ -76,15 +93,18 @@ export function scoreSessionRound(
       topic: s.startingTopic,
       previous: s.rounds.slice(0, roundIndex).map((r) => ({ lyrics: r.lyrics, challenge: r.challenge })),
     },
-    {
-      samples: take.samples,
-      sampleRate: take.sampleRate,
-      beatTimeSec: round.take!.beatTimeSec,
-      sectionStart: sec.start,
-      sectionEnd: sec.end,
-      secondsPerBeat: sec.grid.secondsPerBeat,
-    },
+    take && round.take
+      ? {
+          samples: take.samples,
+          sampleRate: take.sampleRate,
+          beatTimeSec: round.take.beatTimeSec,
+          sectionStart: sec.start,
+          sectionEnd: sec.end,
+          secondsPerBeat: sec.grid.secondsPerBeat,
+        }
+      : null,
     analysis,
+    { secondsPerBar: sec.grid.secondsPerBar, assistance: round.assistance, constraints: round.challenge.spec?.constraints },
   )
 }
 

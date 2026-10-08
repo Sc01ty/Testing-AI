@@ -14,11 +14,16 @@ import { PageShell } from '../components/layout/PageShell'
 import { currentDirector, type DirectorOutput } from '../director'
 import { localModel } from '../director/localModel'
 import type { RoundResult, SavedBeat, Session } from '../domain/types'
-import { advance, currentRound, directorContext, newSession, scoreSessionRound, totalRounds } from '../play/sessionLogic'
+import { advance, barsDone, currentRound, directorContext, gridOf, newSession, roundInputs, scoreSessionRound, totalRounds } from '../play/sessionLogic'
+import { ensureLexicon } from '../coach/lexicon'
+import { computeProfile, type SkillProfile } from '../coach/profile'
+import { buildCoachContext } from '../coach/context'
+import { refineRoundResult } from '../coach/llmCoach'
+import type { AssistanceRecord } from '../coach/types'
 import { takeSamples } from '../play/takeAudio'
 import { useSession } from '../play/useSession'
 import { settingsStore } from '../settings/settings'
-import { deleteSession, getBeat, hasCompletedTrack, latestActiveSession, onSavedChange, saveSession } from '../storage'
+import { deleteSession, getBeat, hasCompletedTrack, latestActiveSession, listSessions, onSavedChange, saveSession } from '../storage'
 import '../components/play/play.css'
 import './views.css'
 
@@ -55,6 +60,8 @@ const readMode = (): Screen => {
 interface JudgingState {
   roundIndex: number
   result: RoundResult
+  /** The local model is still refining the rules' analysis — hold the reveal. */
+  refining: boolean
   directorSource: 'local-ai' | 'basic'
   director: DirectorOutput | null
 }
@@ -79,6 +86,15 @@ export function PlayView() {
     }
     setScreenState(m)
   }
+
+  // the pronunciation dictionary (rhyme by sound) + the player's rolling skill profile
+  const [profile, setProfile] = useState<SkillProfile | null>(null)
+  useEffect(() => {
+    void ensureLexicon()
+    const load = () => void listSessions().then((all) => setProfile(computeProfile(all)))
+    load()
+    return onSavedChange(load)
+  }, [])
 
   useEffect(() => {
     const check = () => void hasCompletedTrack().then(setImproveUnlocked)
@@ -158,19 +174,50 @@ export function PlayView() {
     }
     const run = ++judgingRun.current
     const director = currentDirector()
-    // scores are computed straight away; the director thinks while the reveal plays
-    const result = scoreSessionRound(session, round.index, samples, beat, '')
-    setJudging({ roundIndex: round.index, result, directorSource: director.source, director: null })
+    await ensureLexicon()
+    // 1) the rules score straight away (sync)…
+    const rules = scoreSessionRound(session, round.index, samples, beat, '')
+    const refining = director.source === 'local-ai'
+    setJudging({ roundIndex: round.index, result: rules, refining, directorSource: director.source, director: null })
     audio.play('transition')
-    const withLyrics = { ...session }
-    const out = await director.afterRound(directorContext(withLyrics, round.index)).catch(async () => {
+    // 2) …the local model (if running) refines the language judgements, labelled as such…
+    const inputs = roundInputs(session, round.index, samples, beat)
+    const context = buildCoachContext({
+      topic: session.startingTopic,
+      bpm: gridOf(session, beat)?.bpm,
+      barsTotal: session.length,
+      barsDone: barsDone(session),
+      storyDirection: session.storyDirection,
+      previous: inputs.ctx.previous.map((p) => p.lyrics),
+      challenge: round.challenge,
+      bars: round.lyrics,
+      lastFocus: session.rounds[round.index - 1]?.result?.coach?.focus?.note ?? null,
+      profile,
+      assistance: round.assistance,
+    })
+    const result = refining ? await refineRoundResult(rules, { ...inputs, context }).catch(() => rules) : rules
+    if (run !== judgingRun.current) return
+    if (refining) setJudging((j) => (j && j.roundIndex === round.index ? { ...j, result, refining: false } : j))
+    // 3) …then the director decides where the song goes and what to train next
+    const dctx = directorContext(session, round.index, { profile, secondsPerBar: inputs.secondsPerBar }, result.coach)
+    const out = await director.afterRound(dctx).catch(async () => {
       const { basicDirector } = await import('../director/basicDirector')
-      return basicDirector.afterRound(directorContext(withLyrics, round.index))
+      return basicDirector.afterRound(dctx)
     })
     if (run !== judgingRun.current) return
     // label honestly: if the AI fell back for the challenge, the source says so
     setJudging((j) => (j && j.roundIndex === round.index ? { ...j, director: out, directorSource: out.next?.source ?? j.directorSource } : j))
-  }, [session, beat])
+  }, [session, beat, profile])
+
+  /** Help used on the current round is kept with it (context for the coach, never a penalty). */
+  const recordAssist = useCallback(
+    (a: AssistanceRecord) => {
+      const r = session && currentRound(session)
+      if (!r) return
+      update((s) => ({ ...s, rounds: s.rounds.map((x) => (x.index === r.index ? { ...x, assistance: [...(x.assistance ?? []), a] } : x)) }))
+    },
+    [session, update],
+  )
 
   const continueAfterJudging = useCallback(() => {
     if (!judging?.director) return
@@ -244,9 +291,30 @@ export function PlayView() {
   if (!beat) return <PageShell id="play" compact>{null}</PageShell>
 
   const round = currentRound(session)
-  const helpContext = () => {
+  const helpInput = () => {
     const r = currentRound(session) ?? session.rounds[session.rounds.length - 1]
-    return { ...directorContext(session, r.index - 1), current: r.challenge, draft: r.lyrics }
+    const previous = session.rounds.slice(0, r.index).map((x) => x.lyrics)
+    const secondsPerBar = (60 / beat.bpm) * beat.beatsPerBar
+    return {
+      challenge: r.challenge,
+      topic: session.startingTopic,
+      previous,
+      draft: r.lyrics,
+      secondsPerBar,
+      context: buildCoachContext({
+        topic: session.startingTopic,
+        bpm: beat.bpm,
+        barsTotal: session.length,
+        barsDone: barsDone(session),
+        storyDirection: session.storyDirection,
+        previous,
+        challenge: r.challenge,
+        bars: r.lyrics,
+        lastFocus: session.rounds[r.index - 1]?.result?.coach?.focus?.note ?? null,
+        profile,
+        assistance: r.assistance,
+      }),
+    }
   }
 
   return (
@@ -274,6 +342,7 @@ export function PlayView() {
             director={judging.director}
             isLast={judging.roundIndex + 1 >= totalRounds(session)}
             onContinue={continueAfterJudging}
+            holding={judging.refining}
           />
         ) : (
           <>
@@ -282,7 +351,7 @@ export function PlayView() {
           </>
         )}
       </div>
-      <HelpPanel open={helpOpen && !!round && !judging} onClose={() => setHelpOpen(false)} context={helpContext} />
+      <HelpPanel key={round?.index ?? 'done'} open={helpOpen && !!round && !judging} onClose={() => setHelpOpen(false)} input={helpInput} onAssist={recordAssist} />
     </PageShell>
   )
 }

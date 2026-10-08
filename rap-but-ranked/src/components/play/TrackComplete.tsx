@@ -175,6 +175,12 @@ export function TrackComplete({
           <div className="verdict__score">
             <span className="eyebrow">Final score</span>
             <b>{final.score}</b>
+            {final.writing !== null && (
+              <span className="verdict__split">
+                Writing {final.writing}
+                {final.performance !== null ? ` · Performance ${final.performance}` : ''}
+              </span>
+            )}
           </div>
           <div className={`rank-letter rank-letter--${final.rank} complete__rank`} aria-label={`Final rank ${final.rank}`}>
             {final.rank}

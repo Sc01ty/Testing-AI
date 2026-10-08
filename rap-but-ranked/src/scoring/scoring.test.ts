@@ -75,15 +75,20 @@ describe('performance scoring', () => {
     expect(r.reasons[0]).toContain('barely hear')
   })
 
-  it('a full round produces five explained categories and a rank', () => {
+  it('a full round: explained writing dimensions + measured performance, scored separately', () => {
     const grid = Array.from({ length: 24 }, (_, i) => sectionStart + i * (spb / 3))
     const res = scoreRound(
       { lyrics: ['I finally made enough to get my mum out the flats', 'Now every single bill is paid and I am stacking up stacks'], challenge: money, topic: 'money', previous: [] },
       { samples: vocal(grid, beatTimeSec, 6.5), sampleRate: 16000, beatTimeSec, sectionStart, sectionEnd, secondsPerBeat: spb },
       'test',
     )
-    expect(res.categories.map((c) => c.category)).toEqual(['rhyme', 'prompt', 'story', 'flow', 'originality'])
+    const cats = res.categories.map((c) => c.category)
+    expect(cats).toEqual(expect.arrayContaining(['meaning', 'rhyme', 'cadence', 'naturalness', 'structure', 'originality', 'performance']))
     expect(res.categories.every((c) => c.reasons.length > 0)).toBe(true)
+    expect(res.categories.find((c) => c.category === 'performance')!.basis).toBe('audio')
+    expect(res.writingScore).toBeGreaterThan(0)
+    expect(res.performanceScore).not.toBeNull()
+    expect(res.coach?.analysis.lines[0].syllables).toBeGreaterThan(5)
     expect(['D', 'C', 'B', 'A', 'S']).toContain(res.rank)
     expect(res.feedback.length).toBeGreaterThan(0)
   })

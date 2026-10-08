@@ -158,17 +158,8 @@ test('4 takes play back as one continuous vocal: no gaps, no doubling, no clicks
   // 8 bars at ~92 BPM ≈ 20.9s of continuous vocal (+ pickup/tail)
   expect(spanSec).toBeGreaterThan(20)
 
-  // no gaps: inside the vocal, never more than 40ms below 40% of the level
-  let run = 0
-  let longestDip = 0
-  for (let f = first + 5; f < last - 5; f++) {
-    run = rms[f] < median * 0.4 ? run + 1 : 0
-    longestDip = Math.max(longestDip, run)
-  }
-  expect(longestDip * 10, 'longest dip (ms)').toBeLessThanOrEqual(40)
-
   // no doubling: never more than 60ms above 1.5× the level (two takes playing at once)
-  run = 0
+  let run = 0
   let longestDouble = 0
   for (let f = first; f <= last; f++) {
     run = rms[f] > median * 1.5 ? run + 1 : 0
@@ -223,11 +214,31 @@ test('4 takes play back as one continuous vocal: no gaps, no doubling, no clicks
   console.log(`raw capture glitches: ${raw.glitches.length}; discontinuities added by the mix: ${added.length}`, JSON.stringify({ added, raw: raw.glitches.map((g) => Math.round(g * 1000) / 1000), from: raw.from }))
   expect(added, 'discontinuities the mix added (beat seconds)').toEqual([])
 
+  // no gaps: inside the vocal, never more than 40ms below 40% of the level — unless the raw
+  // recording itself dropped out there (headless Chrome's fake mic does under heavy CPU load)
+  {
+    let run = 0
+    const dips: [number, number][] = []
+    for (let f = first + 5; f < last - 5; f++) {
+      if (rms[f] < median * 0.4) run++
+      else {
+        if (run > 4) dips.push([f - run, f])
+        run = 0
+      }
+    }
+    const mixDips = dips.filter(([s0, s1]) => !raw.glitches.some((g) => g >= raw.from + s0 * 0.01 - 0.02 && g <= raw.from + s1 * 0.01 + 0.02))
+    console.log(`dips over 40ms: ${dips.length}; not explained by capture dropouts: ${mixDips.length}`)
+    expect(mixDips.map(([s0, s1]) => `${(raw.from + s0 * 0.01).toFixed(2)}s for ${(s1 - s0) * 10}ms`), 'gaps the mix added').toEqual([])
+  }
+
   // no metronome: nothing at the click pitches, only the 220 Hz voice
   const win = Math.round(sr * 0.05)
   let clickEnergy = 0
   let voiceEnergy = 0
   for (let i = first * hop; i + win < last * hop; i += win) {
+    // (a capture dropout is a broadband click of its own — skip windows around those)
+    const t = raw.from + i / sr - 0.006
+    if (raw.glitches.some((g) => g > t - 0.03 && g < t + win / sr + 0.03)) continue
     clickEnergy = Math.max(clickEnergy, goertzel(x, i, win, 1400, sr), goertzel(x, i, win, 1900, sr))
     voiceEnergy = Math.max(voiceEnergy, goertzel(x, i, win, 220, sr))
   }

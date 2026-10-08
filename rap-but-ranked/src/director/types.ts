@@ -1,3 +1,5 @@
+import type { SkillProfile } from '../coach/profile'
+import type { CoachReport } from '../coach/types'
 import type { Challenge, DirectorSource } from '../domain/types'
 
 /**
@@ -9,6 +11,8 @@ export interface RoundSoFar {
   challenge: Challenge
   lyrics: [string, string]
   score?: number
+  /** The coach's read of these bars (drives what the next challenge trains). */
+  report?: CoachReport
 }
 
 export interface DirectorContext {
@@ -18,6 +22,9 @@ export interface DirectorContext {
   /** Rounds completed so far (the latest is last). */
   rounds: RoundSoFar[]
   storyDirection: string
+  /** Rolling skill profile across tracks (optional — directors work without it). */
+  profile?: SkillProfile | null
+  secondsPerBar?: number
 }
 
 export interface DirectorOutput {

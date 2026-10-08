@@ -81,23 +81,19 @@ This is tested on the real audio in a browser (`e2e/audio.spec.ts`): no gaps, no
 Everything is saved in the browser as you go. Refreshing mid-track puts you back in the same round, and **Play → Continue** resumes an unfinished track.
 
 ### Scoring (and what it can't do)
-Every score lists the reasons behind it.
+Writing and performance are scored separately, and every number lists its reasons.
+- **Writing:** Meaning, Rhyme (judged by sound with a pronunciation dictionary, including multis across words and slant rhymes), Cadence (syllables against the bar at this tempo), Naturalness, Structure and Originality. **Wordplay** only appears when you attempt it. It can raise the score but never lowers it, so a plain line that moves the story is not marked down.
+- **Performance** comes from your recording: timing on the beat grid, filling the bars, dead gaps. Voice quality, tone and charisma aren't scored, because a mic signal can't judge them fairly.
+- The coach flags **possible rhyme-first filler** ("if the rhyme disappeared, would this word still have a reason to be here?"). It gives one focus for next time, and notes how much Help you used without penalising it.
 
-| Category | From | How |
-| --- | --- | --- |
-| Rhyme | lyrics | End rhyme between your two bars (perfect / multisyllabic / slant / vowel) plus internal rhymes, using a spelling-to-sound rhyme engine |
-| Prompt | lyrics | Did your words hit what the challenge asked for (including slang: bread, racks, mum/mom…)? |
-| Story | lyrics | Do these bars connect to earlier ones (people, themes) *and* move it on (new detail)? |
-| Flow / timing | your recording | How close your syllable onsets land to the beat's 16th-note grid, how much of the two bars you rap through, and long gaps |
-| Originality | lyrics | Clichés, repeated words, the most obvious rhymes, reusing earlier bars |
-
-**Not measured:** voice quality, tone, charisma. No number from a mic signal can judge those fairly, so they aren't scored. Timing depends on the latency estimate; if takes sound early or late, adjust **Settings → Microphone → Timing fine-tune**.
+Details are in [`docs/COACH.md`](docs/COACH.md).
 
 ### The director: Rap AI or basic
 - **Rap AI** is a small language model (Qwen2.5 1.5B, 4-bit) that runs *in your browser on your GPU* via WebGPU/WebLLM. There's no API key, no server, and nothing leaves your computer. It's a one-time ~880 MB download, then cached. It needs a desktop browser with WebGPU (Chrome or Edge) and ~1.6 GB of GPU memory.
 - **Basic director** is rule-based, not an AI, and is always available. It reads your bars for people, themes and details and follows a song arc (setup → deeper → people → obstacle → turning point → back to the start).
 - **They work together:** the rules pick *what* to follow (e.g. you just mentioned your mum), and the model phrases a fresh challenge around it. Every AI answer is checked (on-focus, connected to your song, an instruction rather than lyrics, not a repeat). If it fails, the rules' challenge is used and it's labelled **Basic director**.
-- **Help** (side panel) explains the challenge, gives hints, finds rhymes and talks through the story. It won't write your bars.
+- **Help** is a coach panel with six modes: **Thought** (what do you actually want to say?), **Connections** (where a word leads, and where two worlds collide), **Rhymes** (families: multis, perfect, slant), **Flip** (second meanings and sound-alikes), **Flow** (type a mumbled cadence like `da-da-DA-da` and it reads the shape) and **Critique** (what works, what doesn't, one next action). Each starts with a nudge; **More help** goes deeper. It won't write your bars, and if you ask it to, you get your strongest idea back plus directions to explore.
+- **Challenges have a purpose.** The next challenge continues your song *and* trains something: the weakness the coach just saw, or one that keeps coming up across your recent rounds (e.g. "…without using money, cash or rich" if your bars are too general). Stronger players get stretch goals like hidden double meanings.
 
 ## Beat library
 - **Analysis** runs in your browser; nothing is uploaded anywhere. It decodes the file, draws the waveform from the real audio, then estimates BPM and where bar 1 starts.

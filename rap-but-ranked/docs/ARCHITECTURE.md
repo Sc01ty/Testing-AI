@@ -111,6 +111,9 @@ PlayView ─ setup (PlaySetup) ─ round (RoundStudio) ─ judging (Judging) ─
   - `llmDirector` gets the focus from `chooseFocus()` and asks the model for JSON (schema-constrained). It validates the answer (an instruction, on-focus, connected, not a repeat, not lyrics) and falls back to the rules.
   - `localModel` handles WebGPU detection, choosing the f16/f32 build, cache detection, download/load progress and deletion. WebLLM is imported lazily and runs in a worker.
 
+### The coach
+The rap intelligence (phonetic rhyme engine, semantic lexicon, bar analysis, scoring v2, skill profile, purposeful challenges, Help modes, the model's validated refine step) lives in `src/coach/` and is documented in [`COACH.md`](COACH.md).
+
 ### Why Qwen2.5 1.5B (and not 0.5B)
 Candidates were tested on the same prompts with real song scenarios:
 

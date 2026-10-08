@@ -4,6 +4,21 @@ import { peopleIn, themeLabel, themesIn, topicWords } from '../lyrics/themes'
 import { STAGE_GUIDE, STAGE_LABEL, stageFor, type ArcStage } from './arc'
 import { RHYME_BANK } from './rhymeBank'
 import type { Director, DirectorContext, DirectorOutput, HelpContext, HelpKind } from './types'
+import { withPurpose, type PurposeInput } from '../coach/purpose'
+
+/** What the purpose layer needs from a director context. */
+export function purposeInput(ctx: DirectorContext): PurposeInput {
+  return {
+    nextIndex: ctx.rounds.length,
+    totalRounds: ctx.totalRounds,
+    topic: ctx.topic,
+    bars: ctx.rounds.map((r) => r.lyrics),
+    latest: ctx.rounds[ctx.rounds.length - 1]?.report ?? null,
+    profile: ctx.profile ?? null,
+    secondsPerBar: ctx.secondsPerBar,
+    used: ctx.rounds.map((r) => r.challenge.spec),
+  }
+}
 
 /**
  * Rule-based director. Not an LLM, and it doesn't pretend to be: it reads
@@ -247,7 +262,8 @@ export function basicHelp(kind: HelpKind, ctx: HelpContext): string {
 export const basicDirector: Director = {
   source: 'basic',
   async afterRound(ctx: DirectorContext): Promise<DirectorOutput> {
-    return { analysis: basicAnalysis(ctx), next: basicNextChallenge(ctx), storyDirection: storyDirectionFor(ctx) }
+    const story = basicNextChallenge(ctx)
+    return { analysis: basicAnalysis(ctx), next: story && withPurpose(story, purposeInput(ctx)), storyDirection: storyDirectionFor(ctx) }
   },
   async help(kind, ctx) {
     return basicHelp(kind, ctx)

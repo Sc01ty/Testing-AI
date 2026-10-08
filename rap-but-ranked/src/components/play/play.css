@@ -953,6 +953,7 @@
   display: grid;
   grid-template-rows: auto auto 1fr auto;
   gap: 14px;
+  width: min(440px, 94vw);
   padding: 22px 20px;
   background: linear-gradient(180deg, #120d1d, #09070f);
   box-shadow:
@@ -1006,6 +1007,80 @@
 .help__msg--thinking {
   color: var(--text-3);
   animation: loading-blink 0.7s ease-in-out infinite alternate;
+}
+/* coach messages: a line, then sections, then "your move" */
+.help__tools {
+  display: grid;
+  gap: 8px;
+}
+.help__mode {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+.help__word {
+  height: 38px;
+  font-size: var(--fs-small);
+}
+.help__coach {
+  max-width: 100%;
+  display: grid;
+  gap: 10px;
+}
+.help__line {
+  margin: 0;
+  color: var(--text-1);
+}
+.help__section {
+  display: grid;
+  gap: 6px;
+}
+.help__section ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-2);
+}
+.help__section-title,
+.help__group-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--purple-300);
+}
+.help__group {
+  display: grid;
+  gap: 4px;
+}
+.help__group-label {
+  color: var(--text-3);
+}
+.help__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.help__chip {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-micro);
+  background: rgb(var(--glow) / 0.12);
+  box-shadow: 0 0 0 1px rgb(var(--glow) / 0.25) inset;
+  color: var(--text-1);
+}
+.help__move {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgb(var(--glow) / 0.1);
+  color: var(--text-1);
+}
+.help__more {
+  justify-self: start;
+  height: 32px;
+  padding: 0 12px;
 }
 .help__src {
   display: block;
@@ -1347,4 +1422,26 @@
   .modes {
     padding-left: 18px;
   }
+}
+
+.verdict__split {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.feedback__note {
+  color: var(--text-3);
+}
+.judging__engine {
+  display: block;
+  margin: -4px 0 10px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-4);
 }

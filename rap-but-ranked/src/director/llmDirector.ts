@@ -2,7 +2,8 @@ import type { Challenge } from '../domain/types'
 import { contentWords, stem, words } from '../lyrics/text'
 import { peopleIn, themesIn, topicWords } from '../lyrics/themes'
 import { STAGE_LABEL, stageFor } from './arc'
-import { basicAnalysis, basicHelp, basicNextChallenge, chooseFocus, storyDirectionFor } from './basicDirector'
+import { basicAnalysis, basicHelp, basicNextChallenge, chooseFocus, purposeInput, storyDirectionFor } from './basicDirector'
+import { withPurpose } from '../coach/purpose'
 import { localModel } from './localModel'
 import type { Director, DirectorContext, DirectorOutput, HelpContext, HelpKind } from './types'
 
@@ -98,7 +99,9 @@ export const llmDirector: Director = {
 
   async afterRound(ctx: DirectorContext): Promise<DirectorOutput> {
     const nextIndex = ctx.rounds.length
-    const fallback = (): DirectorOutput => ({ analysis: basicAnalysis(ctx), next: basicNextChallenge(ctx), storyDirection: storyDirectionFor(ctx) })
+    // the model phrases the story part; the purpose (skill + checkable constraint) is added by the rules, so it can't drift
+    const purposeful = (c: Challenge | null) => c && withPurpose(c, purposeInput(ctx))
+    const fallback = (): DirectorOutput => ({ analysis: basicAnalysis(ctx), next: purposeful(basicNextChallenge(ctx)), storyDirection: storyDirectionFor(ctx) })
     if (!localModel.ready) return fallback()
     const done = nextIndex >= ctx.totalRounds
     const stage = stageFor(nextIndex, ctx.totalRounds)
@@ -135,9 +138,9 @@ Output JSON only.`
     const prompt = validChallenge(out.next_challenge ?? '', ctx)
     // it must actually be about the focus (e.g. mention "mum") and connect to the song — otherwise the rules take over
     const onFocus = !prompt || !focus.keyword || words(prompt).some((w) => stem(w) === stem(focus.keyword!) || (FAMILY_ALIASES[focus.keyword!] ?? []).includes(w))
-    if (!prompt || !onFocus || !connected(prompt, ctx)) return { analysis, next: basicNextChallenge(ctx), storyDirection }
+    if (!prompt || !onFocus || !connected(prompt, ctx)) return { analysis, next: purposeful(basicNextChallenge(ctx)), storyDirection }
     const next: Challenge = { prompt, focus: focusFrom(prompt, ctx), storyBeat: STAGE_LABEL[stage], source: 'local-ai' }
-    return { analysis, next, storyDirection }
+    return { analysis, next: purposeful(next), storyDirection }
   },
 
   async help(kind: HelpKind, ctx: HelpContext): Promise<string> {

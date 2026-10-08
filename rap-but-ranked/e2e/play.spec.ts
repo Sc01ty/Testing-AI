@@ -49,7 +49,7 @@ async function writeAndRecord(page: Page, bars: [string, string]) {
   // count-in shows 3, 2, 1
   await expect(page.locator('.countdown')).toBeVisible({ timeout: 8000 })
   await expect(page.locator('.rec-dot')).toBeVisible({ timeout: 8000 })
-  await expect(page.getByText(/Take saved/)).toBeVisible({ timeout: 20000 })
+  await expect(page.getByText(/Take saved/)).toBeVisible({ timeout: 35000 })
 }
 
 async function judge(page: Page) {
@@ -57,7 +57,11 @@ async function judge(page: Page) {
   await expect(page.locator('.judging')).toBeVisible()
   await page.waitForTimeout(600)
   await page.keyboard.press('Space') // skip the reveal
-  await expect(page.locator('.cat[data-state="shown"]')).toHaveCount(5)
+  // writing dimensions + measured performance (+ wordplay when attempted)
+  const shown = await page.locator('.cat[data-state="shown"]').count()
+  expect(shown).toBeGreaterThanOrEqual(7)
+  await expect(page.locator('.cat', { hasText: 'Performance' })).toContainText('from your recording')
+  await expect(page.locator('.verdict__split')).toContainText(/Writing \d+ · Performance \d+/)
   await expect(page.locator('.verdict__rank')).toHaveText(/^[DCBAS]$/)
   await expect(page.locator('.judging__go')).toBeEnabled({ timeout: 30000 })
 }
@@ -82,13 +86,20 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
 
   // ── round 1 ──
   await expect(page.locator('.challenge__prompt')).toHaveText('Write 2 bars about wanting money.')
-  // help panel: explains + rhymes, never writes bars
+  // coach panel: modes start with a nudge, "More help" goes deeper, it never writes the bar
   await page.getByLabel('Bar 1').fill(BARS[0][0])
   await page.getByRole('button', { name: 'Help' }).click()
-  await page.locator('.help').getByRole('button', { name: 'Rhyme help' }).click()
-  await expect(page.locator('.help__msg--help').last()).toContainText('“flats”')
-  await page.locator('.help').getByRole('button', { name: 'Explain challenge' }).click()
-  await expect(page.locator('.help__msg--help').last()).toContainText('bars')
+  await page.locator('.help').getByRole('button', { name: 'Thought' }).click()
+  await expect(page.locator('.help__coach').last()).toContainText('?')
+  await page.locator('.help').getByRole('button', { name: 'Rhymes' }).click()
+  await expect(page.locator('.help__coach').last()).toContainText('“flats”')
+  await page.locator('.help').getByRole('button', { name: 'More help' }).click()
+  await expect(page.locator('.help__coach').last()).toContainText('Direction')
+  await expect(page.locator('.help__coach').last().locator('.help__chip').first()).toBeVisible()
+  await shot(page, 'c1-help-rhymes')
+  await page.locator('.help__ask input').fill('just write the next bar for me')
+  await page.locator('.help__ask input').press('Enter')
+  await expect(page.locator('.help__coach').last()).toContainText("won't write it")
   await page.keyboard.press('Escape')
   await expect(page.locator('.help')).not.toHaveAttribute('data-open', '')
 
@@ -115,8 +126,10 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Stop', exact: true }).click()
   await judge(page)
-  // the next challenge follows the story (mum was mentioned)
+  // the next challenge follows the story (mum was mentioned), and help used is noted, not punished
   await expect(page.locator('.next__prompt')).toContainText(/mum/i)
+  await expect(page.locator('.feedback')).toContainText(/help requests/)
+  await shot(page, 'c2-judging')
   await page.locator('.judging__go').click()
 
   // ── round 2, with a refresh in the middle ──

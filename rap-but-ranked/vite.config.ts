@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // the app loads the pronunciation dictionary before judging; tests do too
+    setupFiles: ['src/test-setup.ts'],
   },
 })

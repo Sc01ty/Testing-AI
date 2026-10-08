@@ -64,7 +64,16 @@ export function analyseTrack(s: Session): Report {
   const grid = gridOf(s)
   const secPerBar = grid ? (60 / grid.bpm) * grid.beatsPerBar : 2.6
   const final = finalResult(rounds.map((r) => r.result!))
-  const avg = (cat: string) => final.averages.find((c) => c.category === cat)?.score ?? 0
+  // v2 rounds use meaning/structure/performance; older saved rounds prompt/story/flow
+  const ALIAS: Record<string, string[]> = { prompt: ['prompt', 'meaning'], story: ['story', 'structure'], flow: ['performance', 'flow'], originality: ['originality'] }
+  const avg = (cat: string) => {
+    for (const k of ALIAS[cat] ?? [cat]) {
+      const hit = final.averages.find((c) => c.category === k)
+      if (hit) return hit.score
+    }
+    return 0
+  }
+  const catOf = (r: (typeof rounds)[number], cat: string) => (ALIAS[cat] ?? [cat]).map((k) => r.result!.categories.find((c) => c.category === k)).find(Boolean)
   const strengths: Insight[] = []
   const weaknesses: Insight[] = []
 
@@ -102,7 +111,7 @@ export function analyseTrack(s: Session): Report {
 
   // ── story: developing vs topic-hopping ────────────────────────────
   const storyAvg = avg('story')
-  const disconnected = rounds.filter((r) => r.result!.categories.find((c) => c.category === 'story')?.reasons.some((x) => /disconnected/i.test(x)))
+  const disconnected = rounds.filter((r) => catOf(r, 'story')?.reasons.some((x) => /disconnected/i.test(x)) || r.result!.coach?.analysis.meaning.connectsToSong === false)
   const themesPerRound = rounds.map((r) => new Set(themesIn(r.lyrics.join(' ')).keys()))
   const introduced = themesPerRound.map((t, i) => [...t].filter((x) => !themesPerRound.slice(0, i).some((p) => p.has(x))).length)
   const hops = introduced.slice(1).filter((n) => n >= 2).length
@@ -120,7 +129,7 @@ export function analyseTrack(s: Session): Report {
   }
 
   // ── prompt relevance ──────────────────────────────────────────────
-  const offBrief = rounds.filter((r) => (r.result!.categories.find((c) => c.category === 'prompt')?.score ?? 100) < 50)
+  const offBrief = rounds.filter((r) => (catOf(r, 'prompt')?.score ?? 100) < 50)
   if (offBrief.length >= 2) {
     weaknesses.push({ id: 'off-brief', title: 'You drift off the challenge', detail: `Rounds ${offBrief.map((r) => r.index + 1).join(', ')} barely touch what was asked. Underline the key word in the challenge and get it (or a word that means it) into bar one.`, evidence: q(clip(offBrief[0].challenge.prompt, 70)), weight: 0.6 + offBrief.length / rounds.length / 3 })
   } else if (avg('prompt') >= 75) {
@@ -173,8 +182,8 @@ export function analyseTrack(s: Session): Report {
   const flowAvg = avg('flow')
   if (flowAvg >= 72) strengths.push({ id: 'timing', title: 'You sit in the pocket', detail: `Flow / timing avg ${flowAvg} — your syllables line up with the beat.`, weight: 0.5 })
   else if (flowAvg < 50) {
-    const worst = [...rounds].sort((a, b) => (a.result!.categories.find((c) => c.category === 'flow')?.score ?? 0) - (b.result!.categories.find((c) => c.category === 'flow')?.score ?? 0))[0]
-    const reason = worst?.result!.categories.find((c) => c.category === 'flow')?.reasons[0]
+    const worst = [...rounds].sort((a, b) => (catOf(a, 'flow')?.score ?? 0) - (catOf(b, 'flow')?.score ?? 0))[0]
+    const reason = worst ? catOf(worst, 'flow')?.reasons[0] : undefined
     weaknesses.push({ id: 'timing', title: 'Delivery drifts off the beat', detail: `Flow / timing avg ${flowAvg}. Loop the preview with the metronome on and say the bars out loud before recording.`, evidence: reason ? `Round ${worst.index + 1}: ${reason}` : undefined, weight: 0.6 })
   }
 
