@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { audio } from '../../audio/AudioEngine'
-import type { Challenge, DirectorSource, RoundResult } from '../../domain/types'
+import type { CategoryScore, Challenge, DirectorSource, Rank } from '../../domain/types'
 import { isReducedMotion } from '../../motion/motion'
 
 /**
@@ -14,7 +14,11 @@ const WORKING: Record<string, string> = {
   story: 'following the story…',
   flow: 'lining your syllables up with the beat…',
   originality: 'checking for clichés…',
+  prompts: 'finding the prompts in what you said…',
+  continuity: 'checking you kept going…',
+  variety: 'counting repeats…',
 }
+const BASIS: Record<CategoryScore['basis'], string> = { audio: 'from your recording', lyrics: 'from your lyrics', transcript: 'from what you said' }
 
 const STEP_MS = 1250
 const FIRST_MS = 1100
@@ -27,64 +31,79 @@ export function Judging({
   director,
   isLast,
   onContinue,
+  eyebrow,
+  scoreLabel = 'Round score',
+  listening,
+  after,
+  continueLabel,
 }: {
-  roundNumber: number
-  totalRounds: number
-  result: RoundResult
-  directorSource: DirectorSource
+  roundNumber?: number
+  totalRounds?: number
+  result: { categories: CategoryScore[]; score: number; rank: Rank; feedback: string[] }
+  directorSource?: DirectorSource
   /** null while the director is still thinking */
-  director: { analysis: string; next: Challenge | null } | null
-  isLast: boolean
+  director?: { analysis: string; next: Challenge | null } | null
+  isLast?: boolean
   onContinue: () => void
+  /** Overrides for other uses (Freestyle): header, score label, "listening" line, what follows the verdict. */
+  eyebrow?: string
+  scoreLabel?: string
+  listening?: string
+  after?: ReactNode
+  continueLabel?: string
 }) {
-  // stage: 0 = listening, 1..5 = categories revealed, 6 = round score, 7 = rank, 8 = feedback/next
-  const [stage, setStage] = useState(isReducedMotion() ? 8 : 0)
-  const timers = useRef<number[]>([])
   const cats = result.categories
+  const n = cats.length
+  const SCORE = n + 1
+  const RANK = n + 2
+  const DONE = n + 3
+  const ready = after !== undefined || !!director
+  // stage: 0 = listening, 1..n = categories revealed, n+1 = score, n+2 = rank, n+3 = feedback/next
+  const [stage, setStage] = useState(isReducedMotion() ? DONE : 0)
+  const timers = useRef<number[]>([])
 
   useEffect(() => {
-    if (stage >= 8) return
-    const delay = stage === 0 ? FIRST_MS : stage === 5 ? 900 : stage === 6 ? 900 : stage === 7 ? 1100 : STEP_MS
+    if (stage >= DONE) return
+    const delay = stage === 0 ? FIRST_MS : stage === n ? 900 : stage === SCORE ? 900 : stage === RANK ? 1100 : STEP_MS
     const t = window.setTimeout(() => setStage((s) => s + 1), delay)
     timers.current.push(t)
     return () => clearTimeout(t)
-  }, [stage])
+  }, [stage, n, SCORE, RANK, DONE])
 
   const verdictRef = useRef<HTMLDivElement>(null)
   const afterRef = useRef<HTMLDivElement>(null)
   // keep the reveal on screen on smaller displays
   useEffect(() => {
-    if (stage === 6) verdictRef.current?.scrollIntoView({ behavior: isReducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
-    if (stage === 8) afterRef.current?.scrollIntoView({ behavior: isReducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
-  }, [stage])
+    if (stage === SCORE) verdictRef.current?.scrollIntoView({ behavior: isReducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+    if (stage === DONE) afterRef.current?.scrollIntoView({ behavior: isReducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+  }, [stage, SCORE, DONE])
 
   useEffect(() => {
-    if (stage >= 1 && stage <= 5) audio.play('toggle')
-    if (stage === 6) audio.play('impact')
-    if (stage === 7) audio.play(result.rank === 'S' || result.rank === 'A' ? 'impactBig' : 'impact')
-    if (stage === 8) audio.play('swish')
-  }, [stage, result.rank])
+    if (stage >= 1 && stage <= n) audio.play('toggle')
+    if (stage === SCORE) audio.play('impact')
+    if (stage === RANK) audio.play(result.rank === 'S' || result.rank === 'A' ? 'impactBig' : 'impact')
+    if (stage === DONE) audio.play('swish')
+  }, [stage, result.rank, n, SCORE, RANK, DONE])
 
-  const skip = () => setStage(8)
+  const skip = () => setStage(DONE)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== ' ' && e.key !== 'Enter') return
+      if (e.target instanceof HTMLElement && e.target.closest('button, a, input, textarea, select')) return
       e.preventDefault()
-      if (stage < 8) skip()
-      else if (director) onContinue()
+      if (stage < DONE) skip()
+      else if (ready) onContinue()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [stage, director, onContinue])
+  }, [stage, ready, onContinue, DONE])
 
   return (
-    <div className="judging" onClick={() => stage < 8 && skip()} data-stage={stage}>
+    <div className="judging" onClick={() => stage < DONE && skip()} data-stage={stage}>
       <header className="judging__head">
-        <span className="eyebrow">
-          Round {roundNumber} / {totalRounds}
-        </span>
+        <span className="eyebrow">{eyebrow ?? `Round ${roundNumber} / ${totalRounds}`}</span>
         <h2 className="judging__listening" data-done={stage > 0 ? '' : undefined}>
-          {stage === 0 ? (directorSource === 'local-ai' ? 'Rap AI is listening' : 'The judge is listening') : 'Results'}
+          {stage === 0 ? (listening ?? (directorSource === 'local-ai' ? 'Rap AI is listening' : 'The judge is listening')) : 'Results'}
           {stage === 0 && <span className="dots" aria-hidden><i />
               <i />
               <i /></span>}
@@ -93,13 +112,13 @@ export function Judging({
 
       <ol className="cats">
         {cats.map((c, i) => {
-          const shown = stage > i + 1 || stage >= 6
+          const shown = stage > i + 1 || stage >= SCORE
           const working = stage === i + 1
           return (
             <li key={c.category} className="cat" data-state={shown ? 'shown' : working ? 'working' : 'pending'} style={{ '--score': c.score } as CSSProperties}>
               <div className="cat__row">
                 <span className="cat__label">{c.label}</span>
-                <span className="cat__basis">{c.basis === 'audio' ? 'from your recording' : 'from your lyrics'}</span>
+                <span className="cat__basis">{BASIS[c.basis]}</span>
                 <span className="cat__score">{shown ? <CountUp to={c.score} /> : working ? '' : '—'}</span>
               </div>
               <div className="cat__bar">
@@ -111,17 +130,17 @@ export function Judging({
         })}
       </ol>
 
-      <div className="verdict" ref={verdictRef} data-shown={stage >= 6 ? '' : undefined}>
+      <div className="verdict" ref={verdictRef} data-shown={stage >= SCORE ? '' : undefined}>
         <div className="verdict__score">
-          <span className="eyebrow">Round score</span>
-          <b>{stage >= 6 ? <CountUp to={result.score} ms={700} /> : '—'}</b>
+          <span className="eyebrow">{scoreLabel}</span>
+          <b>{stage >= SCORE ? <CountUp to={result.score} ms={700} /> : '—'}</b>
         </div>
-        <div className={`verdict__rank rank-letter rank-letter--${result.rank}`} data-shown={stage >= 7 ? '' : undefined} aria-label={`Rank ${result.rank}`}>
+        <div className={`verdict__rank rank-letter rank-letter--${result.rank}`} data-shown={stage >= RANK ? '' : undefined} aria-label={`Rank ${result.rank}`}>
           {result.rank}
         </div>
       </div>
 
-      {stage >= 8 && (
+      {stage >= DONE && (
         <div className="aftermath" ref={afterRef}>
           <ul className="feedback">
             {result.feedback.map((f) => (
@@ -129,7 +148,8 @@ export function Judging({
             ))}
             {director?.analysis && <li className="feedback__story">{director.analysis}</li>}
           </ul>
-          {!isLast && (
+          {after}
+          {after === undefined && !isLast && roundNumber !== undefined && totalRounds !== undefined && (
             <div className="next" data-ready={director ? '' : undefined}>
               <span className="eyebrow">
                 Next challenge · {roundNumber + 1} / {totalRounds}
@@ -140,17 +160,17 @@ export function Judging({
           )}
           <button
             className="btn btn--primary judging__go"
-            disabled={!director}
+            disabled={!ready}
             onClick={(e) => {
               e.stopPropagation()
               onContinue()
             }}
           >
-            <span>{isLast ? 'See your track' : 'Next round'}</span>
+            <span>{continueLabel ?? (isLast ? 'See your track' : 'Next round')}</span>
           </button>
         </div>
       )}
-      {stage < 8 && <span className="judging__skip">Click or press Space to skip</span>}
+      {stage < DONE && <span className="judging__skip">Click or press Space to skip</span>}
     </div>
   )
 }

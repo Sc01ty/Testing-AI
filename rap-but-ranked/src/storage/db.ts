@@ -1,15 +1,16 @@
 /**
  * Tiny promise wrapper over IndexedDB. One database for the app; stores are
- * added here as stages need them (beats now; takes/sessions in Stage 3–5).
+ * added here as features need them: beats, play sessions, vocal takes, freestyles.
  */
 const DB_NAME = 'rap-but-ranked'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export const STORES = {
   beats: 'beats', // BeatMeta, keyPath id
   beatAudio: 'beatAudio', // { id, blob }, keyPath id
   sessions: 'sessions', // Session, keyPath id
-  takeAudio: 'takeAudio', // { id, sessionId, blob }, keyPath id
+  takeAudio: 'takeAudio', // { id, sessionId, blob }, keyPath id (sessionId = play session or freestyle)
+  freestyles: 'freestyles', // FreestyleSession, keyPath id
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -31,6 +32,10 @@ export function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORES.takeAudio)) {
         db.createObjectStore(STORES.takeAudio, { keyPath: 'id' }).createIndex('sessionId', 'sessionId')
+      }
+      // v3: freestyles
+      if (!db.objectStoreNames.contains(STORES.freestyles)) {
+        db.createObjectStore(STORES.freestyles, { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt')
       }
     }
     req.onsuccess = () => {

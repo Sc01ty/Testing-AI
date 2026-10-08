@@ -17,6 +17,13 @@ test.use({
 })
 test.setTimeout(240_000)
 
+/** SHOTS=dir saves screenshots of key screens (for reviewing the UI). */
+async function shot(page: Page, name: string) {
+  if (!process.env.SHOTS) return
+  await page.waitForTimeout(1600) // let entrance animations settle
+  await page.screenshot({ path: `${process.env.SHOTS}/${name}.png`, fullPage: true })
+}
+
 const BARS: [string, string][] = [
   ['I finally made enough to get my mum out the flats', 'Every single bill paid now we never looking back'],
   ['Bought my mum a house with a garden and a gate', 'She cried at the keys said her son was worth the wait'],
@@ -62,6 +69,11 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
 
   await addBeat(page)
   await page.goto('/#/play')
+  // PLAY / IMPROVE — Improve is locked until a rap is finished
+  await page.locator('.modes__item', { hasText: 'IMPROVE' }).click()
+  await expect(page.locator('.modes__locked')).toContainText('COMPLETE A RAP FIRST')
+  await shot(page, 'p1-modes-locked')
+  await page.locator('.modes__item', { hasText: 'PLAY' }).click()
   await page.getByPlaceholder('Untitled track').fill('Mum Out The Flats')
   await page.getByRole('button', { name: 'wanting money', exact: true }).click()
   // a 28s beat only fits 8 bars — longer lengths are disabled
@@ -80,10 +92,22 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   await page.keyboard.press('Escape')
   await expect(page.locator('.help')).not.toHaveAttribute('data-open', '')
 
-  // preview plays the exact two bars
+  // preview plays the exact two bars, and stops by itself
   await page.getByRole('button', { name: 'Preview bars' }).click()
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Preview bars' })).toBeVisible({ timeout: 8000 }) // 2 bars at 92 BPM ≈ 5.2s
+  // loop on: it keeps going past the end of the two bars until stopped
+  await page.getByRole('button', { name: 'Loop preview' }).click()
+  await expect(page.getByRole('button', { name: 'Loop preview' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Metronome' }).click()
+  await expect(page.getByRole('button', { name: 'Metronome' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Preview bars' }).click()
+  await page.waitForTimeout(7000)
+  await shot(page, 'p2-studio-loop')
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await page.getByRole('button', { name: 'Loop preview' }).click()
+  await page.getByRole('button', { name: 'Metronome' }).click()
 
   await writeAndRecord(page, BARS[0])
   // listen back: beat + vocal
@@ -110,6 +134,7 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   // ── rounds 3–4 ──
   for (const i of [2, 3]) {
     await expect(page.locator('.challenge .eyebrow')).toContainText(`Challenge ${i + 1} / 4`)
+    if (i === 3) await shot(page, 'p3-studio-strip')
     await writeAndRecord(page, BARS[i])
     await judge(page)
     await page.locator('.judging__go').click()
@@ -122,6 +147,9 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   await expect(page.locator('.lyrics-sheet')).toContainText(BARS[3][1])
   await page.getByRole('tab', { name: 'Round history' }).click()
   await expect(page.locator('.history__round')).toHaveCount(4)
+  // the song timeline shows the four takes joined into one vocal
+  await expect(page.locator('.vocal-regions')).toHaveAttribute('aria-label', 'Your vocal: 4 takes joined into one')
+  await shot(page, 'p4-complete')
 
   await page.getByRole('button', { name: 'Play full track' }).click()
   await expect(page.locator('.complete__play')).toContainText('Stop', { timeout: 15000 })
@@ -140,8 +168,36 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   // ~4 bars-ish of intro/outro + 8 bars at 92 BPM, stereo 16-bit 44.1k → several MB
   expect(size).toBeGreaterThan(2_000_000)
 
-  // reopening Play shows no unfinished track (it's complete)
-  await page.getByRole('button', { name: 'New track' }).click()
+  // it's in BEATS → SAVED, and plays from there after a refresh
+  await page.getByRole('button', { name: /open in BEATS/ }).click()
+  await expect(page.getByRole('tab', { name: /Saved/ })).toHaveAttribute('aria-selected', 'true')
+  await page.reload()
+  const row = page.locator('.saved-row', { hasText: 'Mum Out The Flats' })
+  await expect(row).toBeVisible()
+  await expect(row.locator('.saved-row__rank')).toHaveText(/^[DCBAS]$/)
+  await shot(page, 'p5-saved')
+  await row.getByRole('button', { name: /^Play / }).click()
+  await expect(row).toHaveAttribute('data-playing', '', { timeout: 15000 })
+  await row.getByRole('button', { name: /^Stop / }).click()
+  await row.getByRole('button', { name: /Round history/ }).click()
+  await expect(page.locator('.history__round')).toHaveCount(4)
+  await page.getByRole('button', { name: '← All saved' }).click()
+
+  // reopening Play from the menu: PLAY / IMPROVE first, and IMPROVE is unlocked now
+  await page.goto('/')
+  await expect(page.locator('.title')).toHaveAttribute('data-phase', 'menu', { timeout: 5000 })
+  await page.waitForTimeout(500)
+  await page.locator('.menu__item', { hasText: 'PLAY' }).click()
+  await page.locator('.modes__item', { hasText: 'IMPROVE' }).click()
+  await expect(page.locator('.improve__track')).toHaveCount(1)
+  await expect(page.locator('.improve__section')).toHaveCount(4)
+  await expect(page.locator('.insight').first()).toBeVisible()
+  await shot(page, 'p6-improve')
+  const ex = page.locator('.exercise').first()
+  await ex.getByRole('button', { name: 'Check' }).click()
+  await expect(ex.locator('.exercise__notes')).toContainText('Not yet')
+  await page.getByRole('button', { name: '← Play / Improve' }).click()
+  await page.locator('.modes__item', { hasText: 'PLAY' }).click()
   await expect(page.locator('.resume')).toHaveCount(0)
   expect(errors).toEqual([])
 })

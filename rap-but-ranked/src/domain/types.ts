@@ -76,14 +76,14 @@ export interface TakeMeta {
 }
 
 /** Categories are only scored when the system has a legitimate input for them. */
-export type ScoreCategory = 'rhyme' | 'prompt' | 'story' | 'flow' | 'originality'
+export type ScoreCategory = 'rhyme' | 'prompt' | 'story' | 'flow' | 'originality' | 'prompts' | 'continuity' | 'variety'
 
 export interface CategoryScore {
   category: ScoreCategory
   label: string
   score: number // 0–100
   /** What produced this number. */
-  basis: 'lyrics' | 'audio'
+  basis: 'lyrics' | 'audio' | 'transcript'
   /** Plain-English reasons — the score must be explainable. */
   reasons: string[]
 }
@@ -107,11 +107,20 @@ export interface Round {
   result: RoundResult | null
 }
 
+/** The beat's timing when the track was made (so it still plays right if the beat is edited or deleted). */
+export interface BeatGrid {
+  bpm: number
+  introOffset: number
+  durationSec: number
+  beatsPerBar: number
+}
+
 export interface Session {
   id: string
   trackName: string
   beatId: string
   beatName: string
+  beatGrid?: BeatGrid
   startingTopic: string
   length: TrackLength
   rounds: Round[]
@@ -122,6 +131,63 @@ export interface Session {
   updatedAt: number
 }
 
-// ── Freestyle (Stage 6) ────────────────────────────────────────────
+// ── Freestyle ──────────────────────────────────────────────────────
 export type FreestyleDifficulty = 'easy' | 'medium' | 'hard' | 'chaos'
 export type FreestyleDuration = 30 | 60 | 120
+
+/** One prompt word, shown from `bar` (0-based, timeline) until the next. */
+export interface FreestylePrompt {
+  word: string
+  bar: number
+}
+
+export interface TranscriptWord {
+  text: string
+  /** Timeline seconds. */
+  start: number
+  end: number
+}
+
+export interface FreestyleTake {
+  id: string
+  /** Timeline second of sample 0 (latency compensated; timeline 0 = bar 1 of the freestyle). */
+  startTime: number
+  durationSec: number
+  sampleRate: number
+  latencySec: number
+  inputPeak: number
+  peaks: number[]
+  recordedAt: number
+}
+
+export interface FreestyleResult {
+  categories: CategoryScore[]
+  score: number
+  rank: Rank
+  feedback: string[]
+  /** Per prompt: did you use it, and the words that show it. */
+  prompts: { word: string; bar: number; hit: boolean; evidence: string[] }[]
+  /** False when speech recognition wasn't available — word-based categories are then left out. */
+  transcribed: boolean
+  scoredAt: number
+}
+
+export interface FreestyleSession {
+  id: string
+  kind: 'freestyle'
+  name: string
+  beatId: string
+  beatName: string
+  beatGrid: BeatGrid
+  difficulty: FreestyleDifficulty
+  /** Bars actually played (whole bars ≈ the chosen duration). */
+  bars: number
+  /** Looped part of the beat file (whole bars), timeline 0 = loop.start. */
+  loop: { start: number; end: number }
+  prompts: FreestylePrompt[]
+  take: FreestyleTake | null
+  transcript: { text: string; words: TranscriptWord[]; model: string } | null
+  result: FreestyleResult | null
+  createdAt: number
+  updatedAt: number
+}

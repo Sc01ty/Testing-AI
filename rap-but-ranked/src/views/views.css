@@ -346,3 +346,201 @@
   width: 100%;
   accent-color: var(--purple-400);
 }
+
+/* ── FREESTYLE: setup extras ── */
+.fs-setup__note {
+  margin: 10px 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.fs-setup__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 16px;
+}
+.fs-setup__asr {
+  flex: 1 1 220px;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+
+/* ── FREESTYLE: live ── */
+.fs-live {
+  display: grid;
+  gap: 18px;
+  max-width: 1100px;
+}
+.fs-live__top {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.fs-live__stat {
+  display: grid;
+  gap: 2px;
+}
+.fs-live__stat b {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.fs-live__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.fs-live__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  min-height: clamp(220px, 34vh, 340px);
+  border-radius: var(--radius-2);
+  background: radial-gradient(60% 70% at 50% 50%, rgb(var(--glow) / 0.16), transparent 75%);
+  overflow: hidden;
+}
+.fs-live__word {
+  font-size: clamp(3rem, 9vw, 7.5rem);
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 50px rgb(var(--glow) / 0.7);
+}
+.fs-live__ready,
+.fs-live__first {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.fs-live__next {
+  font-size: var(--fs-small);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--purple-300);
+}
+.countdown--inline {
+  position: static;
+  background: none;
+  font-size: clamp(5rem, 12vw, 9rem);
+}
+.fs-live__bars {
+  display: grid;
+  grid-template-columns: repeat(var(--bars), 1fr);
+  gap: 3px;
+  padding-top: 16px;
+}
+.fs-live__bars i {
+  position: relative;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--bg-4);
+  overflow: visible;
+}
+.fs-live__bars i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--purple-300), var(--purple-600));
+  transform-origin: left;
+  transform: scaleX(var(--fill));
+}
+.fs-live__bars i[data-prompt] {
+  box-shadow: -2px 0 0 0 rgb(var(--glow));
+}
+.fs-live__bars em {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.fs-live__bars--small {
+  padding: 16px 0 4px 54px;
+}
+
+/* ── FREESTYLE: results ── */
+.fs-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fs-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: var(--fs-small);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+}
+.fs-chip small {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-4);
+}
+.fs-chip[data-hit='yes'] {
+  background: rgb(var(--glow) / 0.18);
+  box-shadow: 0 0 0 1px rgb(var(--glow) / 0.6) inset;
+}
+.fs-chip[data-hit='yes'] b {
+  color: var(--purple-300);
+}
+.fs-chip[data-hit='no'] {
+  color: var(--text-3);
+}
+.fs-chip[data-hit='no'] b {
+  color: #ff5d7a;
+}
+.fs-transcript__title {
+  margin: 22px 0 8px;
+}
+.fs-transcript__prompt {
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgb(var(--glow) / 0.2);
+  color: var(--purple-300);
+}
+.fs-hit {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--glow));
+  text-underline-offset: 3px;
+}
+.fs-silent {
+  color: var(--text-4);
+}
+.fs-listening__bar {
+  max-width: 520px;
+}
+
+@media (max-width: 720px) {
+  .fs-live__top {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .fs-live__bars em {
+    display: none;
+  }
+}

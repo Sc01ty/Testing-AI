@@ -21,6 +21,16 @@ export interface Settings {
   latencyOffsetMs: number
   /** 'local' = in-browser AI model when available, 'basic' = rule-based director only. */
   aiMode: 'local' | 'basic'
+  /** Quiet click on every beat while previewing (and recording, if enabled). Never in exports. */
+  metronome: boolean
+  metronomeVolume: number // 0..1
+  metronomeWhileRecording: boolean
+  /** Preview loops the two bars until stopped. */
+  previewLoop: boolean
+  /** Play your previous take during the count-in, so each take flows out of the last. */
+  hearLastTake: boolean
+  /** Transcribe freestyles on this device (Whisper) so prompts / rhyme / variety can be judged. */
+  freestyleTranscribe: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,6 +44,12 @@ export const DEFAULT_SETTINGS: Settings = {
   micDeviceId: '',
   latencyOffsetMs: 0,
   aiMode: 'local',
+  metronome: false,
+  metronomeVolume: 0.35,
+  metronomeWhileRecording: true,
+  previewLoop: false,
+  hearLastTake: true,
+  freestyleTranscribe: true,
 }
 
 const STORAGE_KEY = 'rbr.settings.v1'
@@ -56,6 +72,12 @@ export function sanitizeSettings(raw: unknown): Settings {
     latencyOffsetMs:
       typeof r.latencyOffsetMs === 'number' && Number.isFinite(r.latencyOffsetMs) ? Math.max(-300, Math.min(300, Math.round(r.latencyOffsetMs))) : d.latencyOffsetMs,
     aiMode: r.aiMode === 'basic' || r.aiMode === 'local' ? r.aiMode : d.aiMode,
+    metronome: typeof r.metronome === 'boolean' ? r.metronome : d.metronome,
+    metronomeVolume: clamp01(r.metronomeVolume, d.metronomeVolume),
+    metronomeWhileRecording: typeof r.metronomeWhileRecording === 'boolean' ? r.metronomeWhileRecording : d.metronomeWhileRecording,
+    previewLoop: typeof r.previewLoop === 'boolean' ? r.previewLoop : d.previewLoop,
+    hearLastTake: typeof r.hearLastTake === 'boolean' ? r.hearLastTake : d.hearLastTake,
+    freestyleTranscribe: typeof r.freestyleTranscribe === 'boolean' ? r.freestyleTranscribe : d.freestyleTranscribe,
   }
 }
 

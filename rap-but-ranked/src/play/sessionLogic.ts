@@ -15,6 +15,7 @@ export function newSession(input: { trackName: string; beat: BeatMeta; topic: st
     trackName: input.trackName.trim() || 'Untitled track',
     beatId: input.beat.id,
     beatName: input.beat.name,
+    beatGrid: { bpm: input.beat.bpm, introOffset: input.beat.introOffset, durationSec: input.beat.durationSec, beatsPerBar: input.beat.beatsPerBar },
     startingTopic: topic,
     length: input.length,
     rounds: [{ index: 0, challenge: firstChallenge(topic), lyrics: ['', ''], take: null, result: null }],
@@ -101,6 +102,11 @@ export function runningScore(s: Session) {
   if (!scored.length) return null
   const score = Math.round(scored.reduce((a, r) => a + r.result!.score, 0) / scored.length)
   return { score, rank: rankForScore(score) }
+}
+
+/** The beat timing a session was made with (older sessions: the beat's current timing). */
+export function gridOf(s: Session, beat?: Pick<BeatMeta, 'bpm' | 'introOffset' | 'durationSec' | 'beatsPerBar'> | null) {
+  return s.beatGrid ?? (beat ? { bpm: beat.bpm, introOffset: beat.introOffset, durationSec: beat.durationSec, beatsPerBar: beat.beatsPerBar } : null)
 }
 
 export function barsDone(s: Session) {

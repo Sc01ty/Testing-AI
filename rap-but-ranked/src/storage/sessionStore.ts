@@ -1,5 +1,6 @@
 import type { Session } from '../domain/types'
 import { STORES, openDb, requestToPromise, txDone } from './db'
+import { notifySaved } from './events'
 
 /**
  * Play sessions and their vocal takes, independent of any UI.
@@ -11,6 +12,7 @@ export async function saveSession(session: Session): Promise<void> {
   const tx = db.transaction(STORES.sessions, 'readwrite')
   tx.objectStore(STORES.sessions).put({ ...session, updatedAt: Date.now() })
   await txDone(tx)
+  if (session.status === 'complete') notifySaved()
 }
 
 export async function getSession(id: string): Promise<Session | null> {
@@ -43,6 +45,7 @@ export async function deleteSession(id: string): Promise<void> {
     }
   }
   await txDone(tx)
+  notifySaved()
 }
 
 export async function saveTakeAudio(id: string, sessionId: string, blob: Blob): Promise<void> {

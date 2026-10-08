@@ -340,3 +340,61 @@
 .input--fake.input--link:hover {
   color: var(--text-1);
 }
+
+/* small round toggle (loop, metronome) — purple when on */
+.ibtn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--text-3);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+  transition:
+    color var(--dur-2),
+    background-color var(--dur-2),
+    box-shadow var(--dur-2),
+    transform var(--dur-1);
+}
+.ibtn:hover:not(:disabled) {
+  color: var(--text-1);
+  box-shadow: 0 0 0 1px rgb(var(--glow) / 0.55) inset;
+}
+.ibtn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.ibtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ibtn[aria-pressed='true'] {
+  color: #fff;
+  background: rgb(var(--glow) / 0.32);
+  box-shadow:
+    0 0 0 1px rgb(var(--glow) / 0.85) inset,
+    0 0 18px -4px rgb(var(--glow) / 0.9);
+}
+
+/* tabs (Track Complete, BEATS | SAVED) */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line-1);
+}
+.tab {
+  height: 40px;
+  padding: 0 14px;
+  font-size: var(--fs-small);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--dur-2), border-color var(--dur-2);
+}
+.tab[aria-selected='true'] {
+  color: var(--text-1);
+  border-color: var(--purple-400);
+}

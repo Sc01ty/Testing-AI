@@ -1,5 +1,5 @@
 import type { CategoryScore, Challenge } from '../domain/types'
-import { contentWords, lastWord, rhymeStrength, stem, words, type RhymeKind } from '../lyrics/text'
+import { STOPWORDS, contentWords, lastWord, rhymeStrength, stem, words, type RhymeKind } from '../lyrics/text'
 import { peopleIn, THEMES, themesIn, themesOfWord, topicWords } from '../lyrics/themes'
 
 /**
@@ -34,7 +34,8 @@ export function scoreRhyme(lines: [string, string]): CategoryScore {
   else reasons.push(`${quote(end1)} and ${quote(end2)} don't rhyme`)
 
   // internal rhymes: pairs of content words across both bars (excluding the end pair)
-  const all = [...words(lines[0]), ...words(lines[1])].filter((w) => w.length > 2)
+  // (filler words don't count: "the" / "she" isn't an internal rhyme anyone hears)
+  const all = [...words(lines[0]), ...words(lines[1])].filter((w) => w.length > 2 && !STOPWORDS.has(w))
   const pairs: string[] = []
   let internal = 0
   for (let i = 0; i < all.length; i++)
@@ -103,7 +104,7 @@ export function scorePrompt(ctx: LyricContext): CategoryScore {
 }
 
 // ── STORY ────────────────────────────────────────────────────────────
-function concreteness(text: string) {
+export function concreteness(text: string) {
   const ws = contentWords(text)
   const specific = ws.filter((w) => w.length >= 6 || /\d/.test(w)).length + peopleIn(text).length
   return Math.min(1, specific / 3)
@@ -147,7 +148,7 @@ export function scoreStory(ctx: LyricContext): CategoryScore {
 }
 
 // ── ORIGINALITY ──────────────────────────────────────────────────────
-const CLICHES = [
+export const CLICHES = [
   'money on my mind',
   'on my grind',
   'get money',
@@ -169,7 +170,7 @@ const CLICHES = [
   'stay humble',
   'self made',
 ]
-const LAZY_PAIRS: [string, string][] = [
+export const LAZY_PAIRS: [string, string][] = [
   ['money', 'honey'],
   ['time', 'rhyme'],
   ['flow', 'go'],

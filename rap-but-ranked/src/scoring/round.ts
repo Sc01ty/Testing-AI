@@ -8,7 +8,7 @@ import { analysePerformance, scoreFlow, type PerformanceInput } from './performa
  * One round's result. Weights favour what a rap judge cares about most,
  * and the order is the order categories are revealed on screen.
  */
-export const WEIGHTS: Record<CategoryScore['category'], number> = {
+export const WEIGHTS: Partial<Record<CategoryScore['category'], number>> = {
   rhyme: 0.21,
   prompt: 0.19,
   story: 0.19,
@@ -20,7 +20,7 @@ export function scoreRound(ctx: LyricContext, perf: Omit<PerformanceInput, 'lyri
   const syll = lineSyllables(ctx.lyrics[0]) + lineSyllables(ctx.lyrics[1])
   const flow = scoreFlow(analysePerformance({ ...perf, lyricSyllables: syll }), { secondsPerBeat: perf.secondsPerBeat, lyricSyllables: syll })
   const categories: CategoryScore[] = [scoreRhyme(ctx.lyrics), scorePrompt(ctx), scoreStory(ctx), flow, scoreOriginality(ctx)]
-  const score = Math.round(categories.reduce((s, c) => s + c.score * WEIGHTS[c.category], 0))
+  const score = Math.round(categories.reduce((s, c) => s + c.score * (WEIGHTS[c.category] ?? 0), 0))
   return { categories, score, rank: rankForScore(score), feedback: feedbackFor(categories), analysis, scoredAt: Date.now() }
 }
 

@@ -64,3 +64,15 @@ describe('text', () => {
     expect(topicWords('wanting money')).toEqual(expect.arrayContaining(['wanting', 'money', 'cash', 'racks']))
   })
 })
+
+describe('past tense and -tience rhymes', () => {
+  it('rhymes past-tense endings on their sound', () => {
+    expect(rhymeStrength('hand', 'planned').score).toBeGreaterThanOrEqual(0.9)
+    expect(rhymeStrength('wild', 'smiled').score).toBeGreaterThanOrEqual(0.7)
+    expect(rhymeStrength('wanted', 'haunted').score).toBeGreaterThanOrEqual(0.7)
+    expect(rhymeStrength('stopped', 'dropped').score).toBeGreaterThanOrEqual(0.9)
+  })
+  it('hears station / patience as at least a vowel rhyme', () => {
+    expect(rhymeStrength('station', 'patience').score).toBeGreaterThanOrEqual(0.5)
+  })
+})

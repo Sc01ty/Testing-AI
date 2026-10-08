@@ -51,6 +51,15 @@ export function SettingsView() {
           <Row label="Beats" sub="Beat previews and playback" i={7}>
             <Slider label="Beats volume" value={s.beatVolume} onChange={(v) => set({ beatVolume: v })} />
           </Row>
+          <Row label="Metronome" sub="Quiet click on the beat while previewing. Never in your tracks." i={7}>
+            <Toggle label="Metronome" checked={s.metronome} onChange={(v) => set({ metronome: v })} />
+          </Row>
+          <Row label="Metronome volume" i={7}>
+            <Slider label="Metronome volume" value={s.metronomeVolume} onChange={(v) => set({ metronomeVolume: v })} />
+          </Row>
+          <Row label="Metronome while recording" sub="Headphones on, or the mic hears it" i={7}>
+            <Toggle label="Metronome while recording" checked={s.metronomeWhileRecording} onChange={(v) => set({ metronomeWhileRecording: v })} />
+          </Row>
           <Row label="Menu music" i={7}>
             <Toggle label="Menu music" checked={s.menuMusic} onChange={(v) => set({ menuMusic: v })} />
           </Row>
@@ -149,13 +158,16 @@ function MicSettings() {
         <input
           className="latency"
           type="range"
-          min={-150}
-          max={150}
+          min={-300}
+          max={300}
           step={5}
           aria-label="Latency fine-tune"
           value={s.latencyOffsetMs}
           onChange={(e) => set({ latencyOffsetMs: Number(e.target.value) })}
         />
+      </Row>
+      <Row label="Hear your last take" sub="It plays through the count-in, so each 2 bars flow out of the last" i={6}>
+        <Toggle label="Hear your last take in the count-in" checked={s.hearLastTake} onChange={(v) => set({ hearLastTake: v })} />
       </Row>
     </>
   )

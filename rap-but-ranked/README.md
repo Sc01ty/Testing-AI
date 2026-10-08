@@ -44,24 +44,39 @@ The production build is `npm run build && npm run preview` (http://localhost:417
 | --- | --- | --- |
 | 1 | Brand, main menu, design system, UI audio, navigation | ✅ |
 | 2 | Beat library: upload, IndexedDB, waveform, BPM detect/tap, offset, bar grid | ✅ |
-| 3 | Play without AI: setup, 2-bar challenge, preview, count-in, record, playback, retake | — |
-| 4 | Ranking + AI: scoring pipeline, judging screen, rank, feedback, next challenge, Help | — |
-| 5 | Full song: all rounds, take timeline, full playback, final rank, export | — |
-| 6 | Freestyle mode | — |
-| 7 | Devices, latency, polish, deployment | — |
+| 3 | Play without AI: setup, 2-bar challenge, preview, count-in, record, playback, retake | ✅ |
+| 4 | Ranking + AI: scoring pipeline, judging screen, rank, feedback, next challenge, Help | ✅ |
+| 5 | Full song: all rounds, take timeline, full playback, final rank, export | ✅ |
+| 6 | Saved raps, Improve, Freestyle, loop + metronome, continuous takes | ✅ |
+| 7 | Devices, latency calibration, deployment | — |
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how each stage plugs in.
 
 ## Playing a track
+0. **Play** opens on **PLAY / IMPROVE**. Improve stays locked until you've finished a track.
 1. **Beats → Add beat.** Drop an MP3/WAV anywhere on the screen. Check the BPM (½× / 2× / type it / tap **T**) and where bar 1 starts, then save.
 2. **Play.** Name the track, pick the beat, a starting topic and a length (8 / 16 / 32 bars; lengths the beat is too short for are disabled).
 3. **Each round** is 2 bars:
    - Write both bars yourself.
-   - **Preview bars** plays exactly those two bars of the beat.
-   - **Record**: 🎧 headphones on. A bar of count-in (3, 2, 1, with clicks), then rap. It stops by itself after the two bars. The first time, the browser asks for the mic.
+   - **Preview bars** plays exactly those two bars of the beat. The small **loop** button next to it repeats them seamlessly until you stop. The **metronome** button adds a quiet click on every beat (volume in Settings). It's never in your recordings or exports.
+   - **Record**: 🎧 headphones on. A bar of count-in (3, 2, 1, with clicks), during which you hear the end of your previous take so the flow carries on. Then rap. It stops by itself after the two bars. The first time, the browser asks for the mic.
    - **Play back** to hear the beat with your vocal, **Retake**, or **Submit**.
 4. **Judging** reveals five scores, the round score and a D–S rank, then the next challenge. Click or Space skips the reveal.
-5. **Track complete**: final scores and rank, **Play full track** (every take placed exactly where you recorded it, lyrics highlighted), **Download WAV**, lyrics, round history, **Try again**.
+5. **Track complete**: final scores and rank, a **song timeline** (beat + every take), **Play full track**, **Download WAV**, lyrics, round history, **Try again**. The track is saved to **Beats → Saved**.
+
+### One continuous vocal (no gaps)
+Each take is recorded a beat early (pickups) and runs a little past its last bar, so neighbouring takes overlap. When the song plays (and when it's exported), `audio/arrange.ts`:
+- keeps every take at the exact beat position it was recorded. Your timing isn't moved or snapped.
+- cuts each seam at the quietest moment inside the overlap, with a 20 ms crossfade. Nothing plays twice, and no silence is inserted. The only quiet is the quiet you left.
+- trims leading silence before your first word and keeps a natural tail after your last.
+- levels every take to the same loudness.
+
+This is tested on the real audio in a browser (`e2e/audio.spec.ts`): no gaps, no doubled overlaps, no clicks added at seams, no metronome in the export.
+
+## Saved, Improve, Freestyle
+- **Beats → Saved** lists finished tracks and freestyles: rank, score, beat, topic, bars and date, plus play, lyrics, history, WAV download and delete. Vocals and timing are kept in IndexedDB, so a saved song plays back exactly as made. If you delete its beat, the vocals still play on their own.
+- **Improve** reads one finished track and tells you what you're doing well, what's holding you back and what to think about next time, quoting your own bars. It then gives you exercises (for example "write 2 bars about money without using money / cash / rich") with a **Check** button. It's rule-based analysis, not a chatbot, and it never writes bars for you.
+- **Freestyle:** pick a beat, 30s / 1 min / 2 min, a difficulty (Easy: a new word every 8 bars; Medium: every 4; Hard: every 2, harder words; Chaos: random timing and words) and optionally the prompt frequency. The beat loops and you record one continuous take. Afterwards it's transcribed **on your device** (Whisper base, ~77 MB, one-time download, no key, audio never uploaded). It's then scored on Prompts, Continuity, Rhyme, Variety and Flow/timing. Without a transcript (switched off or unavailable), only Continuity and Flow/timing are scored, and the result says so.
 
 Everything is saved in the browser as you go. Refreshing mid-track puts you back in the same round, and **Play → Continue** resumes an unfinished track.
 

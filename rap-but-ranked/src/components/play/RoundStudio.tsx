@@ -2,19 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { audio } from '../../audio/AudioEngine'
 import { beatPlayer, useBeatPlayer, type PlayableBeat } from '../../audio/BeatPlayer'
 import { mic, useMic } from '../../audio/mic'
-import { vocalGain } from '../../audio/mix'
 import { RecordError, TakeRecorder, type RecordPhase } from '../../audio/recordTake'
 import { trackPlayer, useTrackPlayer } from '../../audio/trackPlayer'
 import { encodeWav } from '../../audio/wav'
 import type { Round, SavedBeat, Session } from '../../domain/types'
 import { formatTime } from '../../lib/format'
 import { lineSyllables } from '../../lyrics/text'
-import { barsDone, runningScore, sectionFor, totalRounds } from '../../play/sessionLogic'
-import { forgetTake, rememberTake, takeBuffer } from '../../play/takeAudio'
+import { barsDone, gridOf, runningScore, sectionFor, totalRounds } from '../../play/sessionLogic'
+import { forgetTake, rememberTake } from '../../play/takeAudio'
+import { arrangedClips } from '../../play/vocals'
+import { useSettings } from '../../settings/useSettings'
 import { deleteTakeAudio, getBeatAudio, saveTakeAudio } from '../../storage'
 import { Waveform } from '../beats/Waveform'
 import { Icon } from '../beats/icons'
 import { VocalLane } from './VocalLane'
+import { SongStrip, type VocalShape } from './SongTimeline'
 
 /**
  * One round: read the challenge, write two bars, preview the exact two bars
@@ -42,6 +44,9 @@ export function RoundStudio({
   const playable: PlayableBeat = useMemo(() => ({ id: beat.id, getBlob: () => getBeatAudio(beat.id) }), [beat.id])
   const player = useBeatPlayer()
   const tp = useTrackPlayer()
+  const [settings, setSettings] = useSettings()
+  const clickGrid = useMemo(() => ({ origin: beat.introOffset, secondsPerBeat: spb, beatsPerBar: beat.beatsPerBar }), [beat.introOffset, spb, beat.beatsPerBar])
+  const prevTake = session.rounds[round.index - 1]?.take ?? null
   const micState = useMic()
   const recorder = useRef<TakeRecorder | null>(null)
   const [phase, setPhase] = useState<RecordPhase | 'idle'>('idle')
@@ -70,8 +75,20 @@ export function RoundStudio({
 
   const preview = () => {
     trackPlayer.stop()
-    if (previewing) beatPlayer.pause()
-    else void beatPlayer.play(playable, { from: sec.start, to: sec.end })
+    if (previewing) beatPlayer.stop()
+    else void beatPlayer.play(playable, { from: sec.start, to: sec.end, loop: settings.previewLoop, grid: clickGrid })
+  }
+
+  const toggleLoop = () => {
+    const on = !settings.previewLoop
+    audio.play('toggle')
+    setSettings({ previewLoop: on })
+    if (previewing) beatPlayer.setLoop(on)
+  }
+
+  const toggleMetronome = () => {
+    audio.play('toggle')
+    setSettings({ metronome: !settings.metronome })
   }
 
   const record = useCallback(async () => {
@@ -80,13 +97,17 @@ export function RoundStudio({
       return
     }
     setError(null)
-    beatPlayer.stop()
+    beatPlayer.stop() // (also stops a looping preview before the count-in)
     trackPlayer.stop()
     const rec = new TakeRecorder()
     recorder.current = rec
     try {
+      audio.unlock()
+      const ctx = audio.context
+      // your last take plays through the count-in, so this one flows out of it
+      const leadIn = settings.hearLastTake && prevTake && ctx ? await arrangedClips(ctx, [prevTake]).catch(() => []) : []
       const take = await rec.record(
-        { beat: playable, sectionStart: sec.start, sectionEnd: sec.end, secondsPerBeat: spb, beatsPerBar: beat.beatsPerBar },
+        { beat: playable, sectionStart: sec.start, sectionEnd: sec.end, secondsPerBeat: spb, beatsPerBar: beat.beatsPerBar, gridOrigin: beat.introOffset, leadIn },
         {
           onPhase: (p) => {
             setPhase(p)
@@ -140,7 +161,7 @@ export function RoundStudio({
       setCount(null)
       setLive(null)
     }
-  }, [recording, playable, sec, spb, beat, session.id, round.index, round.take?.id, update])
+  }, [recording, playable, sec, spb, beat, session.id, round.index, round.take?.id, update, settings.hearLastTake, prevTake])
 
   const playback = async () => {
     if (!round.take) return
@@ -149,10 +170,21 @@ export function RoundStudio({
     audio.unlock()
     const ctx = audio.context
     if (!ctx) return
-    const [beatBuf, vocal] = await Promise.all([beatPlayer.loadBuffer(playable), takeBuffer(ctx, round.take.id)])
-    if (!vocal) return setError('This take could not be loaded.')
-    await trackPlayer.play(`take:${round.take.id}`, beatBuf, [{ buffer: vocal, beatTime: round.take.beatTimeSec, gain: vocalGain(round.take.inputPeak) }], Math.max(0, sec.start - spb), Math.min(beat.durationSec, sec.end + spb * 0.5))
+    // hear how it joins: your previous bars lead straight into this take
+    const takes = prevTake ? [prevTake, round.take] : [round.take]
+    const [beatBuf, clips] = await Promise.all([beatPlayer.loadBuffer(playable), arrangedClips(ctx, takes)])
+    if (!clips.some((c) => c.beatTime === round.take!.beatTimeSec)) return setError('This take could not be loaded.')
+    const from = prevTake ? sec.start - sec.grid.secondsPerBar : sec.start - spb
+    await trackPlayer.play(`take:${round.take.id}`, beatBuf, clips, Math.max(0, from), Math.min(beat.durationSec, sec.end + spb * 0.5))
   }
+
+  const songVocals: VocalShape[] = useMemo(
+    () =>
+      session.rounds
+        .filter((r) => r.take && r.result)
+        .map((r) => ({ key: r.take!.id, peaks: r.take!.peaks, start: r.take!.beatTimeSec, duration: r.take!.durationSec, region: [r.take!.sectionStartSec, r.take!.sectionEndSec] as [number, number] })),
+    [session.rounds],
+  )
 
   // keyboard: Esc stops a recording
   useEffect(() => {
@@ -193,10 +225,8 @@ export function RoundStudio({
   return (
     <div className="studio">
       <div className="studio__top enter" style={{ '--i': 1 } as CSSProperties}>
-        <div className="progress" aria-label={`${barsDone(session)} of ${session.length} bars done`}>
-          {Array.from({ length: session.length }, (_, i) => (
-            <i key={i} data-state={i < barsDone(session) ? 'done' : i < barsDone(session) + 2 ? 'now' : undefined} />
-          ))}
+        <div className="progress">
+          <SongStrip grid={gridOf(session, beat)!} bars={session.length} vocals={songVocals} current={round.index} />
         </div>
         <div className="studio__meta">
           <span className="eyebrow">
@@ -282,9 +312,30 @@ export function RoundStudio({
       </section>
 
       <section className="transport enter" style={{ '--i': 5 } as CSSProperties}>
-        <button className="tbtn" onClick={preview} disabled={recording} aria-pressed={previewing}>
-          <Icon name={previewing ? 'pause' : 'play'} size={16} /> {previewing ? 'Stop' : 'Preview bars'}
-        </button>
+        <span className="tgroup">
+          <button className="tbtn" onClick={preview} disabled={recording} aria-pressed={previewing}>
+            <Icon name={previewing ? 'pause' : 'play'} size={16} /> {previewing ? 'Stop' : 'Preview bars'}
+          </button>
+          <button
+            className="ibtn"
+            onClick={toggleLoop}
+            disabled={recording}
+            aria-pressed={settings.previewLoop}
+            aria-label="Loop preview"
+            title={settings.previewLoop ? 'Loop on — preview repeats these two bars until you stop it' : 'Loop off'}
+          >
+            <Icon name="loop" size={16} />
+          </button>
+          <button
+            className="ibtn"
+            onClick={toggleMetronome}
+            aria-pressed={settings.metronome}
+            aria-label="Metronome"
+            title={settings.metronome ? 'Metronome on (volume in Settings) — never in your track' : 'Metronome off'}
+          >
+            <Icon name="metronome" size={16} />
+          </button>
+        </span>
         <button className="tbtn tbtn--rec" onClick={() => void record()} data-active={recording ? '' : undefined} aria-label={recording ? 'Stop recording' : round.take ? 'Record again' : 'Record'}>
           <span className="tbtn__rec-dot" />
           {phase === 'preparing' ? 'Getting ready…' : phase === 'countin' ? 'Count-in…' : phase === 'recording' ? 'Stop' : round.take ? 'Retake' : 'Record'}
@@ -306,7 +357,7 @@ export function RoundStudio({
           (!ready
             ? 'Write both bars, then record them.'
             : !round.take
-              ? `🎧 Headphones on, then Record — you get a bar of count-in (3, 2, 1), then rap bars ${sec.firstBar + 1}–${sec.firstBar + 2}. It stops by itself.`
+              ? `🎧 Headphones on, then Record — you get a bar of count-in (3, 2, 1)${prevTake && settings.hearLastTake ? ' over the end of your last take' : ''}, then rap bars ${sec.firstBar + 1}–${sec.firstBar + 2}. It stops by itself.`
               : `Take saved (${formatTime(round.take.durationSec)}). Play it back, retake, or submit.`)}
       </p>
     </div>

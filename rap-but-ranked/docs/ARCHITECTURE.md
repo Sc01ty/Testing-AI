@@ -102,7 +102,8 @@ PlayView ─ setup (PlaySetup) ─ round (RoundStudio) ─ judging (Judging) ─
 ```
 - **Session state** is `domain/types.ts → Session/Round/TakeMeta/RoundResult`. Rules live in `play/sessionLogic.ts`: the bars a round covers, the lengths allowed, and advance/complete. `useSession` saves every change (lyrics debounced).
 - **Recording** (`audio/recordTake.ts`) schedules a one-bar count-in (clicks + beat), the two bars and a short tail on the AudioContext clock. An AudioWorklet (`recorder.worklet.js`) captures the mic with frame timestamps. Round-trip latency (output + input + the user's fine-tune) is subtracted, so `TakeMeta.beatTimeSec` is the exact beat-file second of the take's first sample. Takes are stored as 16-bit WAV in `takeAudio`.
-- **Playback/mix** (`audio/mix.ts`) uses one scheduler for take playback, full-track playback and the offline WAV export (OfflineAudioContext + a gentle limiter). Quiet takes are gained up to +18 dB.
+- **Playback/mix** (`audio/mix.ts`) uses one scheduler for take playback, full-track playback and the offline WAV export (OfflineAudioContext + a gentle limiter). Clips carry a `region` (start/end/fades) from `audio/arrange.ts`, which joins neighbouring takes at the quietest point of their overlap and levels them. `play/vocals.ts → arrangedClips()` is the one entry point. The beat can also loop (`MixOptions.loop`, for Freestyle).
+- **Metronome** (`audio/metronome.ts`) is a look-ahead scheduler on the AudioContext clock. It feeds its own click bus, never the beat bus or an export, through a gate that follows the setting live. `BeatPlayer` (previews, with seamless `loop`) and the recorders start it with the beat grid.
 - **Scoring** (`scoring/`) is deterministic and explainable: each category returns reasons. Flow is the only audio-based category: onsets from the take vs the 16th-note grid, coverage and gaps.
 - **Director** (`director/`):
   - `Director.afterRound(ctx)` returns `{ analysis, next, storyDirection }`, and `help(kind, ctx)` returns a string.
@@ -126,7 +127,7 @@ Candidates were tested on the same prompts with real song scenarios:
 | 2 Beats ✅ | `storage/beatLibrary.ts`, `audio/analysis/`, `audio/BeatPlayer.ts`, `domain/beatGrid.ts`, `views/BeatsView` + `components/beats/` |
 | 3–5 Play ✅ | `audio/recordTake.ts`, `audio/mix.ts`, `audio/trackPlayer.ts`, `play/`, `scoring/`, `director/`, `components/play/` |
 | Later: server AI | add a `Director` implementation that calls our own server route (the key stays on the server); `currentDirector()` picks it |
-| 6 Freestyle | `views/freestyle/*` reusing transport, recorder and AI service |
+| 6 Saved / Improve / Freestyle ✅ | `storage/freestyleStore.ts` (DB v3) + `components/saved/`, `improve/analyse.ts` + `components/play/ImproveView.tsx`, `freestyle/` (prompts, recorder, on-device Whisper in `asr.worker.ts`, scoring, session) + `components/freestyle/` |
 | 7 | device selection, latency calibration, deployment workflow |
 
 ### AI rules baked into the contract

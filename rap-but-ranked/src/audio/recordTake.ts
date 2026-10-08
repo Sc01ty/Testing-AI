@@ -1,16 +1,19 @@
 import { computePeaks } from './analysis/peaks'
 import { audio } from './AudioEngine'
 import { beatPlayer, type PlayableBeat } from './BeatPlayer'
+import { ClickTrack, type ClickGrid } from './metronome'
 import { estimateLatency, mic } from './mic'
-import { scheduleMix } from './mix'
+import { scheduleMix, type VocalClip } from './mix'
 import { trackPlayer } from './trackPlayer'
+import { settingsStore } from '../settings/settings'
 import workletUrl from './recorder.worklet.js?url'
 
 /**
  * Record two bars over the beat:
  *
  *   [ count-in bar: · 3 2 1 ] [ bar A ][ bar B ] (tail)
- *          beat + clicks          beat + mic capture
+ *    beat + clicks + your last     beat + mic capture
+ *    take (so the flow carries on)
  *
  * Everything is scheduled on the AudioContext clock. The mic is captured
  * by an AudioWorklet with frame timestamps, and the round-trip latency
@@ -23,6 +26,10 @@ export interface RecordPlan {
   sectionEnd: number
   secondsPerBeat: number
   beatsPerBar: number
+  /** Downbeat the metronome locks to (beat-file seconds). */
+  gridOrigin: number
+  /** Your previous take(s), heard during the count-in and cut at the bar line. */
+  leadIn?: VocalClip[]
 }
 
 export type RecordPhase = 'preparing' | 'countin' | 'recording' | 'finishing'
@@ -56,7 +63,7 @@ const TAIL_SEC = 0.45
 const LIVE_COLUMNS = 220
 
 const workletReady = new WeakMap<BaseAudioContext, Promise<void>>()
-function loadWorklet(ctx: AudioContext) {
+export function loadWorklet(ctx: AudioContext) {
   let p = workletReady.get(ctx)
   if (!p) {
     p = ctx.audioWorklet.addModule(workletUrl)
@@ -65,10 +72,68 @@ function loadWorklet(ctx: AudioContext) {
   return p
 }
 
-function click(ctx: AudioContext, out: AudioNode, when: number, accent: boolean) {
+/**
+ * Mic capture with sample-accurate timestamps: every chunk carries the
+ * context frame it was captured at, so any window of context time can be
+ * cut out exactly afterwards.
+ */
+export class Capture {
+  readonly chunks: { frame: number; data: Float32Array }[] = []
+  private node: AudioWorkletNode
+  private sink: GainNode
+
+  constructor(
+    private ctx: AudioContext,
+    private source: MediaStreamAudioSourceNode,
+  ) {
+    this.node = new AudioWorkletNode(ctx, 'rbr-recorder', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] })
+    this.sink = ctx.createGain()
+    this.sink.gain.value = 0
+    source.connect(this.node)
+    this.node.connect(this.sink).connect(ctx.destination)
+    this.node.port.onmessage = (e: MessageEvent<{ frame: number; data: Float32Array }>) => this.chunks.push(e.data)
+  }
+
+  async stop() {
+    this.node.port.postMessage('stop')
+    await new Promise((r) => setTimeout(r, 80))
+    this.node.port.onmessage = null
+    this.source.disconnect(this.node)
+    this.node.disconnect()
+    this.sink.disconnect()
+  }
+
+  /** Samples between two context times (silence where nothing was captured). */
+  window(start: number, end: number) {
+    const sr = this.ctx.sampleRate
+    const f0 = Math.round(start * sr)
+    const f1 = Math.round(end * sr)
+    const samples = new Float32Array(Math.max(0, f1 - f0))
+    for (const c of this.chunks) {
+      const s = c.frame - f0
+      for (let i = 0; i < c.data.length; i++) {
+        const j = s + i
+        if (j >= 0 && j < samples.length) samples[j] = c.data[i]
+      }
+    }
+    return samples
+  }
+}
+
+export function peakOf(samples: Float32Array) {
+  let p = 0
+  for (let i = 0; i < samples.length; i++) {
+    const a = samples[i] < 0 ? -samples[i] : samples[i]
+    if (a > p) p = a
+  }
+  return p
+}
+
+export function countClick(ctx: AudioContext, out: AudioNode, when: number, accent: boolean) {
   const o = ctx.createOscillator()
   const g = ctx.createGain()
   o.frequency.value = accent ? 1760 : 1320
+  g.gain.value = 0.0001
   g.gain.setValueAtTime(0.0001, when)
   g.gain.exponentialRampToValueAtTime(accent ? 0.22 : 0.14, when + 0.002)
   g.gain.exponentialRampToValueAtTime(0.0001, when + 0.05)
@@ -131,21 +196,27 @@ export class TakeRecorder {
     const lead = spb * PICKUP_BEATS
     const latency = estimateLatency(ctx)
 
-    // capture node
-    const node = new AudioWorkletNode(ctx, 'rbr-recorder', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] })
-    const sink = ctx.createGain()
-    sink.gain.value = 0
-    source.connect(node)
-    node.connect(sink).connect(ctx.destination)
-    const captured: { frame: number; data: Float32Array }[] = []
+    const capture = new Capture(ctx, source)
+    const captured = capture.chunks
     let drawn = 0 // how many captured chunks the live waveform has used
-    node.port.onmessage = (e: MessageEvent<{ frame: number; data: Float32Array }>) => captured.push(e.data)
 
-    // schedule beat (from one bar before the section) + count-in clicks
+    // schedule beat (from one bar before the section) + count-in clicks,
+    // + your previous take through the count-in, cut at the bar line
     const t0 = ctx.currentTime + 0.2
     const sectionAt = t0 + preroll
-    const scheduled = scheduleMix(ctx, out, buffer, [], plan.sectionStart - preroll, plan.sectionEnd + Math.min(0.6, spb), t0)
-    for (let k = 0; k < plan.beatsPerBar; k++) scheduled.push(click(ctx, out, t0 + k * spb, k === 0))
+    const leadIn = (plan.leadIn ?? []).map((c) => {
+      const r = c.region ?? { start: c.beatTime, end: c.beatTime + c.buffer.duration, fadeIn: 0.012, fadeOut: 0.012 }
+      return { ...c, region: { ...r, end: Math.min(r.end, plan.sectionStart), fadeOut: Math.min(r.end, plan.sectionStart) < r.end ? 0.04 : r.fadeOut } }
+    })
+    const scheduled = scheduleMix(ctx, out, buffer, leadIn, plan.sectionStart - preroll, plan.sectionEnd + Math.min(0.6, spb), t0)
+    const clickOut = audio.clickOutput ?? out
+    for (let k = 0; k < plan.beatsPerBar; k++) scheduled.push(countClick(ctx, clickOut, t0 + k * spb, k === 0))
+    const metronome = new ClickTrack()
+    const s = settingsStore.get()
+    if (s.metronomeWhileRecording) {
+      const grid: ClickGrid = { origin: plan.gridOrigin, secondsPerBeat: spb, beatsPerBar: plan.beatsPerBar }
+      metronome.start({ at: sectionAt, from: plan.sectionStart, to: plan.sectionEnd, grid })
+    }
 
     const winStart = sectionAt - lead + latency
     let winEnd = sectionAt + sectionDur + TAIL_SEC + latency
@@ -207,11 +278,8 @@ export class TakeRecorder {
 
     cb.onPhase?.('finishing')
     cb.onCount?.(null)
-    node.port.postMessage('stop')
-    await new Promise((r) => setTimeout(r, 80))
-    node.port.onmessage = null
-    source.disconnect(node)
-    node.disconnect()
+    metronome.stop()
+    await capture.stop()
     for (const s of scheduled) {
       try {
         s.stop()
@@ -222,19 +290,8 @@ export class TakeRecorder {
 
     if (this.cancelled || winEnd <= winStart + 0.3) return null
 
-    // assemble the window into one buffer
-    const f0 = Math.round(winStart * sr)
-    const f1 = Math.round(winEnd * sr)
-    const samples = new Float32Array(Math.max(0, f1 - f0))
-    for (const c of captured) {
-      const start = c.frame - f0
-      for (let i = 0; i < c.data.length; i++) {
-        const j = start + i
-        if (j >= 0 && j < samples.length) samples[j] = c.data[i]
-      }
-    }
-    let inputPeak = 0
-    for (let i = 0; i < samples.length; i++) inputPeak = Math.max(inputPeak, Math.abs(samples[i]))
+    const samples = capture.window(winStart, winEnd)
+    const inputPeak = peakOf(samples)
 
     return {
       samples,

@@ -14,10 +14,13 @@ export function BeatRow({
   index,
   onEdit,
   onDelete,
+  usedBy = 0,
 }: {
   beat: BeatMeta
   isNew: boolean
   index: number
+  /** Saved raps made on this beat (they keep their vocals if it's deleted). */
+  usedBy?: number
   onEdit: () => void
   onDelete: () => Promise<void>
 }) {
@@ -31,6 +34,7 @@ export function BeatRow({
 
   const playable: PlayableBeat = useMemo(() => ({ id: beat.id, getBlob: () => getBeatAudio(beat.id) }), [beat.id])
   const position = useCallback(() => beatPlayer.position(beat.id), [beat.id])
+  const clickGrid = useMemo(() => ({ origin: beat.introOffset, secondsPerBeat: 60 / beat.bpm, beatsPerBar: beat.beatsPerBar }), [beat.introOffset, beat.bpm, beat.beatsPerBar])
 
   // the confirm quietly backs off if ignored
   useEffect(() => {
@@ -59,7 +63,7 @@ export function BeatRow({
     >
       <button
         className="beat-row__play"
-        onClick={() => beatPlayer.toggle(playable)}
+        onClick={() => beatPlayer.toggle(playable, clickGrid)}
         aria-label={playing ? `Pause ${beat.name}` : `Play ${beat.name}`}
         data-loading={loading ? '' : undefined}
       >
@@ -80,7 +84,7 @@ export function BeatRow({
           offset={beat.introOffset}
           position={position}
           animate={playing}
-          onSeek={(t) => void beatPlayer.play(playable, { from: t })}
+          onSeek={(t) => void beatPlayer.play(playable, { from: t, grid: clickGrid })}
           label={`${beat.name} waveform. Click to play from a point.`}
         />
       </div>
@@ -113,7 +117,7 @@ export function BeatRow({
 
       <div className="beat-row__confirm" aria-hidden={!confirming}>
         <span>
-          Delete <b>{beat.name}</b>?
+          Delete <b>{beat.name}</b>?{usedBy > 0 && ` ${usedBy} saved rap${usedBy === 1 ? '' : 's'} will lose the beat (vocals stay).`}
         </span>
         <button className="btn btn--quiet" tabIndex={confirming ? 0 : -1} onClick={() => (audio.play('back'), setConfirming(false))}>
           <span>Keep</span>

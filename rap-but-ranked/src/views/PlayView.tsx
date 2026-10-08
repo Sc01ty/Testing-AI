@@ -8,6 +8,8 @@ import { PlaySetup, type SetupValues } from '../components/play/PlaySetup'
 import { RoundStudio } from '../components/play/RoundStudio'
 import { TrackComplete } from '../components/play/TrackComplete'
 import { AiStatus } from '../components/play/AiStatus'
+import { ImproveView } from '../components/play/ImproveView'
+import { ModeSelect, type PlayMode } from '../components/play/ModeSelect'
 import { PageShell } from '../components/layout/PageShell'
 import { currentDirector, type DirectorOutput } from '../director'
 import { localModel } from '../director/localModel'
@@ -16,7 +18,7 @@ import { advance, currentRound, directorContext, newSession, scoreSessionRound, 
 import { takeSamples } from '../play/takeAudio'
 import { useSession } from '../play/useSession'
 import { settingsStore } from '../settings/settings'
-import { deleteSession, getBeat, latestActiveSession, saveSession } from '../storage'
+import { deleteSession, getBeat, hasCompletedTrack, latestActiveSession, onSavedChange, saveSession } from '../storage'
 import '../components/play/play.css'
 import './views.css'
 
@@ -38,6 +40,18 @@ const writeOpen = (id: string | null) => {
   }
 }
 
+/** PLAY's own sub-screens: choose (PLAY / IMPROVE), set up a track, or improve. */
+const MODE_KEY = 'rbr.playMode'
+type Screen = 'select' | PlayMode
+const readMode = (): Screen => {
+  try {
+    const m = sessionStorage.getItem(MODE_KEY)
+    return m === 'play' || m === 'improve' ? m : 'select'
+  } catch {
+    return 'select'
+  }
+}
+
 interface JudgingState {
   roundIndex: number
   result: RoundResult
@@ -55,6 +69,35 @@ export function PlayView() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const judgingRun = useRef(0)
+  const [screen, setScreenState] = useState<Screen>(readMode)
+  const [improveUnlocked, setImproveUnlocked] = useState<boolean | null>(null)
+  const setScreen = (m: Screen) => {
+    try {
+      sessionStorage.setItem(MODE_KEY, m)
+    } catch {
+      /* ignore */
+    }
+    setScreenState(m)
+  }
+
+  useEffect(() => {
+    const check = () => void hasCompletedTrack().then(setImproveUnlocked)
+    check()
+    return onSavedChange(check)
+  }, [])
+
+  // Esc inside Play setup / Improve goes back to PLAY / IMPROVE, not all the way to the menu
+  useEffect(() => {
+    if (sessionId || screen === 'select') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      e.preventDefault()
+      audio.play('back')
+      setScreen('select')
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [sessionId, screen])
 
   // the in-browser model: find out what's possible, and load it from disk if it's already downloaded
   useEffect(() => {
@@ -88,6 +131,7 @@ export function PlayView() {
 
   const open = (id: string | null) => {
     writeOpen(id)
+    if (!id && screen === 'select') setScreen('play')
     setJudging(null)
     setHelpOpen(false)
     setSessionId(id)
@@ -144,9 +188,30 @@ export function PlayView() {
   }
 
   // ── render ─────────────────────────────────────────────────────────
+  const backToModes = (
+    <button className="btn btn--quiet modes__back" onClick={() => (audio.play('back'), setScreen('select'))}>
+      <span>← Play / Improve</span>
+    </button>
+  )
+  if ((!sessionId || !session) && screen === 'select') {
+    return (
+      <PageShell id="play">
+        <ModeSelect improveUnlocked={improveUnlocked} hasActive={!!resume} onPick={(m) => setScreen(m)} />
+      </PageShell>
+    )
+  }
+  if ((!sessionId || !session) && screen === 'improve') {
+    return (
+      <PageShell id="play" compact side={<span className="mode-crumb">/ Improve</span>}>
+        {backToModes}
+        <ImproveView onPlay={() => setScreen('play')} />
+      </PageShell>
+    )
+  }
   if (!sessionId || !session) {
     return (
       <PageShell id="play">
+        {backToModes}
         <PlaySetup
           resume={resume}
           onStart={(v) => void start(v)}

@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { audio } from '../audio/AudioEngine'
+import { readBeatsTab, writeBeatsTab, type BeatsTab } from '../app/navigation'
 import { beatPlayer, type PlayableBeat } from '../audio/BeatPlayer'
 import { AddBeatFlow } from '../components/beats/AddBeatFlow'
 import { BeatEditor, type BeatDraft } from '../components/beats/BeatEditor'
 import { BeatRow } from '../components/beats/BeatRow'
 import { Icon } from '../components/beats/icons'
 import { PageShell } from '../components/layout/PageShell'
+import { SavedShelf } from '../components/saved/SavedShelf'
 import { Button } from '../components/ui/ui'
 import type { SavedBeat } from '../domain/types'
 import { formatBytes } from '../lib/format'
 import { deleteBeat, getBeat, getBeatAudio, updateBeat } from '../storage/beatLibrary'
 import { useBeats } from '../storage/useBeats'
+import { listSaved, onSavedChange } from '../storage'
 import '../components/beats/beats.css'
 
 export function BeatsView() {
@@ -20,6 +23,27 @@ export function BeatsView() {
   const [newId, setNewId] = useState<string | null>(null)
   const [pageDrag, setPageDrag] = useState(false)
   const dragDepth = useRef(0)
+  const [tab, setTabState] = useState<BeatsTab>(readBeatsTab)
+  const [savedCount, setSavedCount] = useState<number | null>(null)
+  const [usage, setUsage] = useState<Map<string, number>>(new Map())
+  const setTab = (t: BeatsTab) => {
+    writeBeatsTab(t)
+    setTabState(t)
+  }
+  useEffect(() => {
+    const load = () =>
+      void listSaved().then((x) => {
+        setSavedCount(x.length)
+        const m = new Map<string, number>()
+        for (const it of x) {
+          const id = it.kind === 'track' ? it.session.beatId : it.freestyle.beatId
+          m.set(id, (m.get(id) ?? 0) + 1)
+        }
+        setUsage(m)
+      })
+    load()
+    return onSavedChange(load)
+  }, [])
 
   // one player for the whole app: leaving the library stops the preview
   useEffect(() => () => beatPlayer.stop(), [])
@@ -46,6 +70,7 @@ export function BeatsView() {
       setPageDrag(false)
       const file = e.dataTransfer?.files?.[0]
       if (file && !addingRef.current) {
+        setTab('beats')
         setEditing(null)
         setAdding({ file, key: Date.now() })
       }
@@ -73,6 +98,30 @@ export function BeatsView() {
   return (
     <PageShell id="beats">
       <div className="library">
+        <div className="tabs library__tabs enter" role="tablist" style={{ '--i': 2 } as CSSProperties}>
+          {(['beats', 'saved'] as BeatsTab[]).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              className="tab"
+              onClick={() => {
+                if (tab === t) return
+                audio.play('toggle')
+                beatPlayer.stop()
+                setTab(t)
+              }}
+            >
+              {t === 'beats' ? 'Beats' : 'Saved'}
+              <span className="tab__count">{t === 'beats' ? (beats?.length ?? '') : (savedCount ?? '')}</span>
+            </button>
+          ))}
+        </div>
+
+        {tab === 'saved' ? (
+          <SavedShelf beats={beats} />
+        ) : (
+          <>
         <div className="library__bar enter" style={{ '--i': 3 } as CSSProperties}>
           <span className="eyebrow" data-testid="beat-count">
             {beats === null ? 'Loading…' : `${count} ${count === 1 ? 'beat' : 'beats'}${count ? ` · ${formatBytes(totalBytes)}` : ''}`}
@@ -118,6 +167,7 @@ export function BeatsView() {
                   beat={b}
                   index={i}
                   isNew={newId === b.id}
+                  usedBy={usage.get(b.id) ?? 0}
                   onEdit={() => {
                     audio.play('confirm')
                     setAdding(null)
@@ -131,6 +181,8 @@ export function BeatsView() {
               ),
             )}
           </ul>
+        )}
+          </>
         )}
 
         {pageDrag && (

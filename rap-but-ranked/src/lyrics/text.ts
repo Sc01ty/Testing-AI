@@ -75,10 +75,21 @@ export function phonetic(word: string): string {
     w = core
     suffix = 'z'
   }
+  // past tense: "planned" → plan+d, "smiled" → smile+d, "wanted" → want+id
+  if (w.length > 4 && /ed$/.test(w) && !/eed$/.test(w)) {
+    const core = w.slice(0, -2)
+    if (/[td]$/.test(core)) return phonetic(core) + 'id' + suffix
+    if (/([b-df-hj-np-tv-z])\1$/.test(core)) return phonetic(core.slice(0, -1)) + 'd' + suffix
+    if (/[aeiou][b-df-hj-np-tv-z]$/.test(core) && !/[aeiou]{2}[b-df-hj-np-tv-z]$/.test(core)) return phonetic(core + 'e') + 'd' + suffix
+    return phonetic(core) + 'd' + suffix
+  }
   // g-dropping: "grindin" ≈ "grinding"
   if (/in$/.test(w) && w.length > 4 && /[^aeiou]in$/.test(w)) w = w + 'g'
   w = w
     .replace(/tion$|sion$/, 'shun')
+    .replace(/tience$|cience$/, 'shuns')
+    .replace(/ild$/, 'Ild') // wild, child, mild
+    .replace(/tient$|cient$/, 'shunt')
     .replace(/ph/g, 'f')
     .replace(/ck/g, 'k')
     .replace(/qu/g, 'kw')

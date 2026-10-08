@@ -5,8 +5,9 @@ import { MUSIC_TRACKS, UI_SOUNDS, perceptualGain, type MusicTrackId, type UiSoun
  * One AudioContext for the whole app, with separate buses:
  *
  *   ui bus ───────────────┐
- *   music ─ lowpass ─ bus ┼─ master ─ destination
- *   (later: beat bus, vocal bus, monitor bus)
+ *   music ─ lowpass ─ bus ┤
+ *   beat bus (beat + vocals)┼─ master ─ destination
+ *   click bus (metronome) ┘
  *
  * Nothing is created or downloaded until `unlock()` runs inside a user
  * gesture, which is what browsers require before audio may start. Until
@@ -25,6 +26,7 @@ class AudioEngine {
   private musicMood!: GainNode
   private musicDuck!: GainNode
   private beatBus!: GainNode
+  private clickBus!: GainNode
   private music: { id: MusicTrackId; el: HTMLAudioElement; gain: GainNode; analyser: AnalyserNode } | null = null
   private wantedMusic: MusicTrackId | null = null
   /** Elements created ahead of time so the first play doesn't wait on the network. */
@@ -71,6 +73,7 @@ class AudioEngine {
       this.musicMood = ctx.createGain()
       this.musicDuck = ctx.createGain()
       this.beatBus = ctx.createGain()
+      this.clickBus = ctx.createGain()
       this.musicFilter = ctx.createBiquadFilter()
       this.musicFilter.type = 'lowpass'
       this.musicFilter.frequency.value = 20000
@@ -78,6 +81,7 @@ class AudioEngine {
       this.uiBus.connect(this.master)
       this.musicFilter.connect(this.musicMood).connect(this.musicDuck).connect(this.musicBus).connect(this.master)
       this.beatBus.connect(this.master)
+      this.clickBus.connect(this.master)
       this.master.connect(ctx.destination)
       this.applyLevels(true)
       // audio may start suspended (autoplay rules) and resume on a later gesture
@@ -162,6 +166,11 @@ class AudioEngine {
   /** Where beat previews (and later the Play transport) connect. */
   get beatOutput(): AudioNode | null {
     return this.ctx ? this.beatBus : null
+  }
+
+  /** Metronome clicks: their own level, never part of a mix or export. */
+  get clickOutput(): AudioNode | null {
+    return this.ctx ? this.clickBus : null
   }
 
   /** Fade the menu music right down while a beat is previewing, and back afterwards. */
@@ -253,6 +262,7 @@ class AudioEngine {
     set(this.uiBus.gain, perceptualGain(s.uiVolume))
     set(this.musicBus.gain, perceptualGain(s.musicVolume))
     set(this.beatBus.gain, perceptualGain(s.beatVolume))
+    set(this.clickBus.gain, perceptualGain(s.metronomeVolume) * 0.5)
   }
 
   private loadBuffer(url: string) {

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { audio } from './AudioEngine'
 import { decodeAudio } from './analysis/analyseBeat'
+import { ClickTrack, type ClickGrid } from './metronome'
 import { trackPlayer } from './trackPlayer'
 
 /**
@@ -24,12 +25,14 @@ export interface BeatPlayerState {
   loading: boolean
   /** Length of the loaded beat in seconds (0 until loaded). */
   duration: number
+  /** Repeating [from, to) until stopped. */
+  looping: boolean
   error: string | null
 }
 
 type Listener = () => void
 
-const IDLE: BeatPlayerState = { beatId: null, playing: false, loading: false, duration: 0, error: null }
+const IDLE: BeatPlayerState = { beatId: null, playing: false, loading: false, duration: 0, looping: false, error: null }
 const MAX_CACHED = 4
 
 class BeatPlayer {
@@ -42,6 +45,10 @@ class BeatPlayer {
   private stopAt: number | null = null
   private pausedAt = 0
   private token = 0
+  /** Context time playback ends (non-looping range), or null. */
+  private endCtx: number | null = null
+  private clicks = new ClickTrack()
+  private grid: ClickGrid | undefined
 
   getState = () => this.state
   subscribe = (fn: Listener) => {
@@ -56,8 +63,13 @@ class BeatPlayer {
     if (beatId && beatId !== this.state.beatId) return null
     const ctx = audio.context
     if (this.state.playing && ctx) {
-      const p = this.startedFrom + (ctx.currentTime - this.startedAtCtx)
-      return Math.min(p, this.stopAt ?? this.state.duration)
+      const el = Math.max(0, ctx.currentTime - this.startedAtCtx)
+      if (this.stopAt !== null) {
+        const len = this.stopAt - this.startedFrom
+        // a range is played as a loop region; it may have wrapped
+        return len > 0 ? this.startedFrom + (el % len) : this.startedFrom
+      }
+      return Math.min(this.startedFrom + el, this.state.duration)
     }
     return this.state.beatId ? this.pausedAt : null
   }
@@ -71,7 +83,12 @@ class BeatPlayer {
     return this.load(beat).catch(() => undefined)
   }
 
-  async play(beat: PlayableBeat, opts: { from?: number; to?: number } = {}) {
+  /**
+   * Play a beat. With a range (`from`–`to`) playback is sample-exact: it
+   * stops at `to`, or with `loop` repeats the range seamlessly until stopped.
+   * With a `grid`, the metronome follows along (if it's switched on).
+   */
+  async play(beat: PlayableBeat, opts: { from?: number; to?: number; loop?: boolean; grid?: ClickGrid } = {}) {
     audio.unlock()
     trackPlayer.stop()
     const token = ++this.token
@@ -106,18 +123,53 @@ class BeatPlayer {
     src.onended = () => {
       if (this.source !== src) return // stopped on purpose
       this.source = null
-      this.pausedAt = to ?? 0
-      this.set({ playing: false })
+      this.clicks.stop()
+      this.pausedAt = to === null ? 0 : from
+      this.set({ playing: false, looping: false })
       audio.setMusicDucked(false)
     }
-    src.start(0, from, to !== null ? Math.max(0.01, to - from) : undefined)
+    const at = ctx.currentTime + 0.03
+    const loop = to !== null && !!opts.loop && to - from > 0.05
+    if (to !== null) {
+      // a range always plays as a loop region, so looping can be switched on/off mid-play
+      src.loop = true
+      src.loopStart = from
+      src.loopEnd = to
+      src.start(at, from)
+      this.endCtx = loop ? null : at + Math.max(0.01, to - from)
+      if (this.endCtx !== null) src.stop(this.endCtx)
+    } else {
+      src.start(at, from)
+      this.endCtx = null
+    }
     this.source = src
-    this.startedAtCtx = ctx.currentTime
+    this.startedAtCtx = at
     this.startedFrom = from
     this.stopAt = to
     this.pausedAt = from
+    this.grid = opts.grid
+    if (opts.grid) this.clicks.start({ at, from, to: to ?? duration, loop, grid: opts.grid })
     audio.setMusicDucked(true)
-    this.set({ loading: false, playing: true, duration })
+    this.set({ loading: false, playing: true, duration, looping: loop })
+  }
+
+  /** Switch looping of the playing range on or off (off = stop at the end of this pass). */
+  setLoop(on: boolean) {
+    const src = this.source
+    const ctx = audio.context
+    if (!src || !ctx || this.stopAt === null || !this.state.playing) return
+    const len = this.stopAt - this.startedFrom
+    if (on) {
+      src.stop(ctx.currentTime + 1e6) // replaces the pending stop (the last stop() call wins)
+      this.endCtx = null
+      this.clicks.setLoop(true)
+    } else {
+      const passes = Math.max(1, Math.ceil((ctx.currentTime - this.startedAtCtx) / len))
+      this.endCtx = this.startedAtCtx + passes * len
+      src.stop(this.endCtx)
+      this.clicks.setLoop(false, this.endCtx)
+    }
+    this.set({ looping: on })
   }
 
   pause() {
@@ -125,18 +177,18 @@ class BeatPlayer {
     this.pausedAt = this.position() ?? 0
     this.token++
     this.stopSource()
-    this.set({ playing: false })
+    this.set({ playing: false, looping: false })
     audio.setMusicDucked(false)
   }
 
-  toggle(beat: PlayableBeat) {
+  toggle(beat: PlayableBeat, grid?: ClickGrid) {
     if (this.isPlaying(beat.id)) this.pause()
-    else void this.play(beat)
+    else void this.play(beat, { grid })
   }
 
   /** Jump to a position; keeps playing if it was playing. */
   seek(beat: PlayableBeat, seconds: number) {
-    if (this.isPlaying(beat.id)) void this.play(beat, { from: seconds })
+    if (this.isPlaying(beat.id)) void this.play(beat, { from: seconds, grid: this.grid })
     else {
       if (this.state.beatId !== beat.id) {
         this.token++
@@ -194,6 +246,7 @@ class BeatPlayer {
   }
 
   private stopSource() {
+    this.clicks.stop()
     const src = this.source
     this.source = null
     if (src) {

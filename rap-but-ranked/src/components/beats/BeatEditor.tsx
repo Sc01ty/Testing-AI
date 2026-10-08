@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { audio } from '../../audio/AudioEngine'
 import { beatPlayer, useBeatPlayer, type PlayableBeat } from '../../audio/BeatPlayer'
 import { BPM_MAX, BPM_MIN, clampBpm, gridFor, tidyBpm } from '../../domain/beatGrid'
@@ -7,6 +7,8 @@ import { formatBpm, formatBytes, formatTime } from '../../lib/format'
 import { createTapTempo } from '../../lib/tapTempo'
 import { Waveform } from './Waveform'
 import { Icon } from './icons'
+import { settingsStore } from '../../settings/settings'
+import { useSettings } from '../../settings/useSettings'
 
 export interface BeatDraft {
   name: string
@@ -99,7 +101,15 @@ export function BeatEditor({ mode, playable, peaks, durationSec, fileName, sizeB
   const setOffset = (seconds: number, source: 'auto' | 'manual' = 'manual') =>
     setDraft((d) => ({ ...d, introOffset: Math.round(Math.max(0, Math.min(durationSec - 1, seconds)) * 1000) / 1000, introOffsetSource: source }))
 
-  const togglePlay = useCallback(() => beatPlayer.toggle(playable), [playable])
+  const clickGrid = useMemo(() => ({ origin: draft.introOffset, secondsPerBeat: 60 / draft.bpm, beatsPerBar: 4 }), [draft.introOffset, draft.bpm])
+  const togglePlay = useCallback(() => beatPlayer.toggle(playable, clickGrid), [playable, clickGrid])
+  const [settings, setSettings] = useSettings()
+
+  // with the metronome on, BPM / start changes are heard straight away: the clicks re-lock to the new grid
+  useEffect(() => {
+    if (!settingsStore.get().metronome || !beatPlayer.isPlaying(playable.id)) return
+    void beatPlayer.play(playable, { from: beatPlayer.position(playable.id) ?? 0, grid: clickGrid })
+  }, [clickGrid, settings.metronome]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // keyboard: Space play/pause, T tap, Esc cancel
   useEffect(() => {
@@ -187,8 +197,17 @@ export function BeatEditor({ mode, playable, peaks, durationSec, fileName, sizeB
         <button className="transport-btn transport-btn--main" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'} data-loading={loading ? '' : undefined}>
           <Icon name={playing ? 'pause' : 'play'} />
         </button>
-        <button className="transport-btn transport-btn--text" onClick={() => void beatPlayer.play(playable, { from: draft.introOffset })}>
+        <button className="transport-btn transport-btn--text" onClick={() => void beatPlayer.play(playable, { from: draft.introOffset, grid: clickGrid })}>
           <Icon name="play" size={12} /> From start marker
+        </button>
+        <button
+          className="ibtn"
+          aria-pressed={settings.metronome}
+          aria-label="Metronome"
+          title={settings.metronome ? 'Metronome on — clicks follow the BPM, so you can check it by ear' : 'Metronome off — turn on to check the BPM by ear'}
+          onClick={() => (audio.play('toggle'), setSettings({ metronome: !settings.metronome }))}
+        >
+          <Icon name="metronome" size={16} />
         </button>
         <TimeReadout beatId={playable.id} duration={durationSec} playing={playing} />
         <span className="beat-editor__keys">

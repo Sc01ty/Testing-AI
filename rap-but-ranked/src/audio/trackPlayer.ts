@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { audio } from './AudioEngine'
-import { scheduleMix, type VocalClip } from './mix'
+import { scheduleMix, type MixOptions, type VocalClip } from './mix'
 
 /**
  * Plays a beat range with vocal clips laid over it (take playback, full
@@ -34,14 +34,14 @@ class TrackPlayer {
     }
   }
 
-  /** Beat-file second currently playing, or null. */
+  /** Timeline second currently playing, or null. */
   position(id?: string): number | null {
     const ctx = audio.context
     if (!this.state.playing || !ctx || (id && id !== this.state.id)) return null
     return Math.min(this.state.to, this.state.from + Math.max(0, ctx.currentTime - this.startedAt))
   }
 
-  async play(id: string, beat: AudioBuffer, clips: VocalClip[], from: number, to: number) {
+  async play(id: string, beat: AudioBuffer | null, clips: VocalClip[], from: number, to: number, opts: Pick<MixOptions, 'loop'> = {}) {
     audio.unlock()
     this.stop()
     this.onStart?.()
@@ -50,7 +50,7 @@ class TrackPlayer {
     if (!ctx || !out) return
     if (ctx.state !== 'running') await ctx.resume().catch(() => undefined)
     const at = ctx.currentTime + 0.05
-    this.sources = scheduleMix(ctx, out, beat, clips, from, to, at)
+    this.sources = scheduleMix(ctx, out, beat, clips, from, to, at, opts)
     this.startedAt = at
     audio.setMusicDucked(true)
     this.set({ id, playing: true, from, to })

@@ -118,6 +118,14 @@ export function MenuView({ from }: { from: RouteId | null }) {
       audio.play('confirm')
       audio.play('transition')
       setLaunching(id)
+      // PLAY from the menu always opens on PLAY / IMPROVE (a refresh keeps you where you were;
+      // an unfinished track is offered under "Continue")
+      try {
+        sessionStorage.removeItem('rbr.playMode')
+        sessionStorage.removeItem('rbr.openSession')
+      } catch {
+        /* ignore */
+      }
       // let the press flash land before the screen changes
       window.setTimeout(() => router.navigate(id), isReducedMotion() ? 0 : 170)
     },
@@ -235,7 +243,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
         </span>
       </div>
       <div className="title__chrome title__chrome--br" aria-hidden={!inMenu}>
-        <span className="eyebrow">Core loop · v0.5</span>
+        <span className="eyebrow">v0.6</span>
       </div>
     </div>
   )

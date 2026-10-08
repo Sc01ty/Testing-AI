@@ -17,7 +17,7 @@ export const MENU_ROUTES: RouteMeta[] = [
 ]
 
 /** The latest stage that's been built; screens for later stages show a lock badge. */
-export const BUILT_STAGE = 5
+export const BUILT_STAGE = 6
 
 export const ROUTE_IDS: RouteId[] = ['menu', ...MENU_ROUTES.map((r) => r.id)]
 
