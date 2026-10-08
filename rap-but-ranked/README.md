@@ -2,7 +2,19 @@
 
 **Write 2 bars. Rap them. Get ranked. Build the song.**
 
-## v0.7 — local duo and freestyle revision
+## v0.8 — online rooms and included beats
+
+Multiplayer now means **two separate devices**: enter your name, create a lobby, share its seven-character code and have your mate join. The host chooses the shared beat/topic/length and Standard or Quick Trade. Each player locks only their own sections; both can see the story so far. Enable voice, ready up on both devices, then the host starts one shared count-in. Keep the tab visible and wear headphones.
+
+Both devices play the same beat locally against a start timestamp adjusted to the room server's clock. WebRTC carries live microphone audio; internet delay affects hearing your mate live. Each device records its own microphone, uploads it and downloads the other player's recording for the aligned finished mix. Overlaps can therefore receive separate performance feedback. Both players save the same combined track; owner-only retakes replace fixed slots and propagate to both browsers. Failed uploads have a retry button; the host can reset an interrupted performance. Reopening the lobby restores access in that tab.
+
+Nine beats supplied from `D:\Video Projects\BEATS` are included; **bank fees - original.mp3 is excluded**. They appear in Beats and all beat selectors. Audio is copied unchanged; BPM/downbeat estimates come from the existing detector and remain adjustable in the beat library. Rooms use the included shared catalogue so nobody needs to upload or transfer a beat manually.
+
+The room API (`public/api/rooms.php`) runs on the Scotty Systems PHP host, stores token-protected room data/audio in a private temporary directory, and expires room access after 24 hours. Expired files are cleaned on subsequent requests. Each room has two participants, a 100 MB recording budget, and 16 MB per upload. Client scores are feedback for a private session, not an authoritative competitive leaderboard. WebRTC uses public STUN servers; no TURN relay is configured, so some restrictive networks cannot connect voice. The UI requires connected voice before starting rather than silently running without your mate.
+
+For local online development run `php -S localhost:4180 -t public` beside Vite; the dev/preview proxy forwards `/api`. `node --test scripts/rooms.test.mjs` checks access and state changes. `npx playwright test e2e/revision.spec.ts` tests isolated clients end to end. `RBR_LIVE_URL=https://scottysystems.it.com/rap-but-ranked/` runs those browser flows against the deployed host. GitHub Pages can serve singleplayer/freestyle but cannot execute PHP; online multiplayer links to the Scotty Systems deployment.
+
+## v0.7 — previous local duo and freestyle revision
 
 Scotty Systems: https://scottysystems.it.com/rap-but-ranked/ · Creator Tools: https://scottysystems.it.com/tools.html#rap-but-ranked
 

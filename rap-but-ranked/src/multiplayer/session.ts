@@ -35,7 +35,7 @@ export function duoObservations(s: DuoSession): string[] {
   }
   if (s.turns.some((t) => t.boundary === 'overlap'))
     notes.push(
-      'Intentional overlaps are part of the shared recording. Listen back together; voice-by-voice performance is not attributed there.',
+      s.mode==='online'?'Intentional overlaps combine two separately captured microphones in the finished mix.': 'Intentional overlaps are part of the shared recording. Listen back together; voice-by-voice performance is not attributed there.',
     )
   if (!notes.length)
     notes.push(
@@ -46,6 +46,8 @@ export function duoObservations(s: DuoSession): string[] {
 export interface DuoSession {
   version: 1
   kind: 'multiplayer'
+  mode?: 'online'
+  roomCode?: string
   id: string
   trackName: string
   players: [string, string]
@@ -197,7 +199,7 @@ export function scoreDuoTurn(
   t: DuoTurn,
   audio: { samples: Float32Array; sampleRate: number; startTime: number } | null,
 ): RoundResult {
-  const overlap = t.boundary === 'overlap' || s.turns[t.index + 1]?.boundary === 'overlap'
+  const overlap = s.mode !== 'online' && (t.boundary === 'overlap' || s.turns[t.index + 1]?.boundary === 'overlap')
   const secondsPerBeat = 60 / s.beatGrid.bpm,
     secondsPerBar = secondsPerBeat * s.beatGrid.beatsPerBar
   const results: RoundResult[] = []

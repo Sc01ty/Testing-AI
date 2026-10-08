@@ -78,4 +78,11 @@ describe('musical duo plan', () => {
     expect(r.performanceScore).toBeNull()
     expect(r.feedback.join(' ')).toContain('not attributed')
   })
+  it('can score a separate microphone during online overlap',()=>{
+    const s=create('standard','overlap');s.mode='online'
+    s.turns[0].lyrics=['I paid the rent today','The bills all went away','My mum can finally sleep','A promise I will keep']
+    const result=scoreDuoTurn(s,s.turns[0],{samples:Float32Array.from({length:80000},(_,i)=>Math.sin(i/9)*.1),sampleRate:8000,startTime:1})
+    expect(result.performanceScore).not.toBeNull()
+    expect(result.feedback.join(' ')).not.toContain('not attributed')
+  })
 })

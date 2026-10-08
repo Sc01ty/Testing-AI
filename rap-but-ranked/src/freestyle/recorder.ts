@@ -22,6 +22,8 @@ export interface FreestylePlan {
   bars: number
   secondsPerBeat: number
   beatsPerBar: number
+  /** Absolute client-clock count-in start, supplied by a synchronised lobby. */
+  startAtMs?: number
 }
 
 export interface FreestyleCallbacks {
@@ -95,7 +97,8 @@ export class FreestyleRecorder {
     const latency = estimateLatency(ctx)
     const capture = new Capture(ctx, source)
 
-    const t0 = ctx.currentTime + 0.25
+    if (plan.startAtMs !== undefined && plan.startAtMs - Date.now() < 200) throw new RecordError('The shared count-in was missed. Ask the host to reset and start again.')
+    const t0 = ctx.currentTime + (plan.startAtMs === undefined ? 0.25 : (plan.startAtMs-Date.now())/1000)
     const zeroAt = t0 + spBar // context time of timeline 0
     const scheduled = scheduleMix(ctx, out, buffer, [], -spBar, total + spb, t0, { loop: plan.loop, beatFadeOut: spb })
     const clickOut = audio.clickOutput ?? out

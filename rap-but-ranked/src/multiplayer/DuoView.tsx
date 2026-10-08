@@ -30,7 +30,7 @@ import { duoMix, downloadDuo } from './audio'
 import type { TrackLength } from '../domain/types'
 import './duo.css'
 
-export function DuoView({ initial, onLeave }: { initial?: DuoSession; onLeave?: () => void }) {
+export function DuoView({ initial, onLeave, networkReadOnly=false }: { initial?: DuoSession; onLeave?: () => void; networkReadOnly?:boolean }) {
   const [s, setS] = useState<DuoSession | null>(initial ?? null)
   const [resume, setResume] = useState<DuoSession | null>(null)
   const [busy, setBusy] = useState(false),
@@ -395,9 +395,9 @@ export function DuoView({ initial, onLeave }: { initial?: DuoSession; onLeave?: 
             >
               Download WAV
             </Button>
-            <Button disabled={busy} onClick={() => void safe(perform)}>
+            {!networkReadOnly && <Button disabled={busy} onClick={() => void safe(perform)}>
               Perform whole track again
-            </Button>
+            </Button>}
           </div>
           <div className="duo-summaries">
             {s.players.map((name, p) => {
@@ -426,10 +426,10 @@ export function DuoView({ initial, onLeave }: { initial?: DuoSession; onLeave?: 
             </ul>
           </Panel>
           <p className="studio__hint">
-            The final rank averages measured round feedback. Writing is judged from typed lyrics.
+            {s.mode==='online' ? 'Each player’s microphone is captured separately, including overlaps. Writing is judged from typed lyrics; performance uses that player’s recording.' : <>The final rank averages measured round feedback. Writing is judged from typed lyrics.
             Overlapping shared-mic sections have no individual performance score. For an overlap
             retake, both players repeat the overlapping words in that fixed slot; the mic cannot
-            extract one voice from the original.
+            extract one voice from the original.</>}
           </p>
           {s.turns.map((t) => (
             <Panel
@@ -444,9 +444,9 @@ export function DuoView({ initial, onLeave }: { initial?: DuoSession; onLeave?: 
                 ))}
               </ol>
               <p>{t.result?.feedback.join(' ')}</p>
-              <Button disabled={busy} onClick={() => void safe(() => retake(t))}>
+              {!networkReadOnly && <Button disabled={busy} onClick={() => void safe(() => retake(t))}>
                 Retake slot {t.index + 1}
-              </Button>
+              </Button>}
               <Button
                 variant="quiet"
                 disabled={busy}

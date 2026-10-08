@@ -1,6 +1,7 @@
 import { gridFor } from '../domain/beatGrid'
 import type { BeatMeta, SavedBeat } from '../domain/types'
 import { STORES, openDb, requestToPromise, txDone } from './db'
+import { includedBeats, includedAudio } from './includedBeats'
 
 /**
  * The beat library, independent of any UI.
@@ -41,11 +42,13 @@ export function withGrid(meta: BeatMeta, blob: Blob): SavedBeat {
 }
 
 const newestFirst = (a: BeatMeta, b: BeatMeta) => b.createdAt - a.createdAt
+function hiddenIncluded():string[]{try{return JSON.parse(localStorage.getItem('rbr.hiddenIncluded')??'[]')}catch{return []}}
 
 export async function listBeats(): Promise<BeatMeta[]> {
   const db = await openDb()
   const all = await requestToPromise(db.transaction(STORES.beats).objectStore(STORES.beats).getAll() as IDBRequest<BeatMeta[]>)
-  return all.sort(newestFirst)
+  const ids=new Set(all.map(b=>b.id))
+  return [...all,...(await includedBeats()).filter(b=>!ids.has(b.id)&&!hiddenIncluded().includes(b.id))].sort(newestFirst)
 }
 
 export async function getBeat(id: string): Promise<SavedBeat | null> {
@@ -55,13 +58,16 @@ export async function getBeat(id: string): Promise<SavedBeat | null> {
     requestToPromise(tx.objectStore(STORES.beats).get(id) as IDBRequest<BeatMeta | undefined>),
     requestToPromise(tx.objectStore(STORES.beatAudio).get(id) as IDBRequest<{ id: string; blob: Blob } | undefined>),
   ])
-  return meta && audio ? withGrid(meta, audio.blob) : null
+  if(meta && audio)return withGrid(meta,audio.blob)
+  const included=(await includedBeats()).find(b=>b.id===id)
+  const blob=included ? await includedAudio(id) : null
+  return included&&blob ? withGrid(meta??included,blob) : null
 }
 
 export async function getBeatAudio(id: string): Promise<Blob | null> {
   const db = await openDb()
   const row = await requestToPromise(db.transaction(STORES.beatAudio).objectStore(STORES.beatAudio).get(id) as IDBRequest<{ id: string; blob: Blob } | undefined>)
-  return row?.blob ?? null
+  return row?.blob ?? await includedAudio(id)
 }
 
 /** Everything Play / Freestyle need, newest first. Beats whose audio is missing are skipped. */
@@ -73,10 +79,13 @@ export async function getSavedBeats(): Promise<SavedBeat[]> {
     requestToPromise(tx.objectStore(STORES.beatAudio).getAll() as IDBRequest<{ id: string; blob: Blob }[]>),
   ])
   const blobs = new Map(audio.map((a) => [a.id, a.blob]))
-  return metas
+  const stored = metas
     .filter((m) => blobs.has(m.id))
     .sort(newestFirst)
     .map((m) => withGrid(m, blobs.get(m.id)!))
+  const ids=new Set(stored.map(b=>b.id))
+  const bundled=await Promise.all((await includedBeats()).filter(b=>!ids.has(b.id)&&!hiddenIncluded().includes(b.id)).map(async b=>withGrid(metas.find(m=>m.id===b.id)??b,(await includedAudio(b.id))!)))
+  return [...stored,...bundled]
 }
 
 function newId() {
@@ -103,10 +112,11 @@ export async function saveBeat(input: NewBeat): Promise<SavedBeat> {
 }
 
 export async function updateBeat(id: string, patch: BeatPatch): Promise<BeatMeta> {
+  const fallback=(await includedBeats()).find(b=>b.id===id)
   const db = await openDb()
   const tx = db.transaction(STORES.beats, 'readwrite')
   const store = tx.objectStore(STORES.beats)
-  const current = await requestToPromise(store.get(id) as IDBRequest<BeatMeta | undefined>)
+  const current = await requestToPromise(store.get(id) as IDBRequest<BeatMeta | undefined>) ?? fallback
   if (!current) throw new Error('That beat no longer exists.')
   const next: BeatMeta = { ...current, ...patch, id, updatedAt: Date.now() }
   store.put(next)
@@ -116,6 +126,7 @@ export async function updateBeat(id: string, patch: BeatPatch): Promise<BeatMeta
 }
 
 export async function deleteBeat(id: string): Promise<void> {
+  if(id.startsWith('included:')){try{localStorage.setItem('rbr.hiddenIncluded',JSON.stringify([...new Set([...hiddenIncluded(),id])]))}catch{/* storage unavailable */}}
   const db = await openDb()
   const tx = db.transaction([STORES.beats, STORES.beatAudio], 'readwrite')
   tx.objectStore(STORES.beats).delete(id)

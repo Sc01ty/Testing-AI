@@ -10,45 +10,65 @@ test.use({
   },
 })
 test.setTimeout(180000)
-async function beat(page: import('@playwright/test').Page) {
-  await page.goto('/#/beats')
-  await page
-    .getByRole('button', { name: /add beat/i })
-    .first()
-    .click()
-  await page.getByTestId('beat-file-input').setInputFiles('e2e/fixtures/Test Beat 92bpm.mp3')
-  await expect(page.locator('.beat-editor')).toBeVisible({ timeout: 15000 })
-  await page.getByLabel('Beat name').fill('Trade Beat')
-  await page.getByRole('button', { name: 'Save beat' }).click()
-  await expect(page.locator('.beat-row')).toBeVisible()
-}
+const app = process.env.RBR_LIVE_URL ?? '/'
 for (const [style, boundary] of [
   ['Standard · 4 bars each', 'Clean'],
   ['Quick Trade · 2 bars each', 'Clean'],
   ['Standard · 4 bars each', 'Overlap · 1 beat early'],
 ] as const) {
-  test(`duo ${style} / ${boundary}: performance, punch-in, reload, save, export`, async ({
-    page,
-  }) => {
-    const errors: string[] = []
-    page.on('pageerror', (e) => errors.push(e.message))
-    await beat(page)
-    await page.goto('/#/play')
-    await page.locator('.modes__item', { hasText: 'MULTIPLAYER' }).click()
-    await page.getByPlaceholder('Player 1 name').fill('Scotty')
-    await page.getByPlaceholder('Player 2 name').fill('Alex')
-    await page.getByPlaceholder('Our track').fill('Trade Test')
-    await page.getByPlaceholder('What are you both rapping about?').fill('money')
-    await page.getByRole('radio', { name: style, exact: true }).click()
-    await page.getByRole('radio', { name: boundary, exact: true }).click()
-    await page.getByRole('radio', { name: '8 bars', exact: true }).click()
-    // BeatSelect is a button list, not a native select.
-    await page.getByRole('combobox', { name: 'Beat', exact: true }).selectOption({ index: 0 })
-    await page.getByRole('button', { name: 'Prepare duo track' }).click()
-    const turns = style.startsWith('Standard') ? 2 : 4
+  test(`room across isolated clients: ${style}, ${boundary}`, async ({ browser, baseURL }) => {
+    const a = await browser.newContext({ baseURL }),
+      b = await browser.newContext({ baseURL }),
+      host = await a.newPage(),
+      guest = await b.newPage(),
+      errors: string[] = []
+    for (const p of [host, guest]) {
+      p.on('pageerror', (e) => errors.push(e.message))
+      await p.goto(`${app}#/play`)
+      await p.locator('.modes__item', { hasText: 'MULTIPLAYER' }).click()
+    }
+    await host.getByPlaceholder('Your name').fill('Scotty')
+    await host.getByRole('button', { name: 'Create lobby', exact: true }).click()
+    await expect(host.getByTestId('room-code')).toBeVisible()
+    const code = await host.getByTestId('room-code').innerText()
+    await guest.getByPlaceholder('Your name').fill('Alex')
+    await guest.getByPlaceholder('Room code').fill('AAAAAAA')
+    await guest.getByRole('button', { name: 'Join lobby', exact: true }).click()
+    await expect(guest.getByRole('alert')).toContainText('not found')
+    await guest.getByPlaceholder('Room code').fill(code)
+    await guest.getByRole('button', { name: 'Join lobby', exact: true }).click()
+    await expect(guest.getByTestId('room-code')).toHaveText(code)
+    await expect(host.getByText(/Alex · connected/)).toBeVisible()
+    await host.getByPlaceholder('Our track').fill('Remote Trade')
+    await host.getByPlaceholder('What are you both rapping about?').fill('money')
+    await host
+      .getByRole('combobox', { name: 'Beat', exact: true })
+      .selectOption('included:fast-hard-trap')
+    await expect(host.getByRole('option')).toHaveCount(9)
+    await expect(host.getByRole('combobox')).not.toContainText(/bank fees/i)
+    const trackBars =
+      process.env.RBR_LIVE_URL && style.startsWith('Standard') && boundary === 'Clean' ? 16 : 8
+    await host.getByRole('radio', { name: `${trackBars} bars`, exact: true }).click()
+    await host.getByRole('radio', { name: style, exact: true }).click()
+    await host.getByRole('radio', { name: boundary, exact: true }).click()
+    await host.getByRole('button', { name: 'Prepare shared track' }).click()
+    await expect(guest.getByText('Remote Trade', { exact: true })).toBeVisible()
+    for (const p of [host, guest])
+      await p.getByRole('button', { name: 'Enable voice', exact: true }).click()
+    await expect(host.getByText('VOICE · connected', { exact: true })).toBeVisible({
+      timeout: 30000,
+    })
+    await expect(guest.getByText('VOICE · connected', { exact: true })).toBeVisible({
+      timeout: 30000,
+    })
+    const turns = trackBars / (style.startsWith('Standard') ? 4 : 2),
+      bars = style.startsWith('Standard') ? 4 : 2
     for (let t = 0; t < turns; t++) {
-      for (let i = 0; i < (turns === 2 ? 4 : 2); i++)
-        await page
+      const p = t % 2 === 0 ? host : guest,
+        other = t % 2 === 0 ? guest : host
+      await expect(other.getByRole('button', { name: 'Lock my section' })).toHaveCount(0)
+      for (let i = 0; i < bars; i++)
+        await p
           .getByLabel(`Bar ${i + 1}`, { exact: true })
           .fill(
             [
@@ -58,31 +78,72 @@ for (const [style, boundary] of [
               'Now we never fear the pain',
             ][i],
           )
-      await page.getByRole('button', { name: 'Lock section & direct next player' }).click()
+      await p.getByRole('button', { name: 'Lock my section', exact: true }).click()
     }
-    await page.getByRole('button', { name: 'Start performance' }).click()
-    await expect(page.getByLabel('Performance mode')).toBeVisible()
-    await expect(page.locator('.duo-live h2')).toContainText('Scotty', { timeout: 10000 })
-    await expect(page.locator('.duo-live h2')).toContainText('Alex', { timeout: 20000 })
-    await expect(page.getByText('COMBINED TRACK SCORE')).toBeVisible({ timeout: 40000 })
-    const slots = await page.locator('.duo-slot b').allTextContents()
-    await page.getByRole('button', { name: 'Retake slot 1', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Retake slot 1', exact: true })).toBeEnabled({
-      timeout: 30000,
-    })
-    expect(await page.locator('.duo-slot b').allTextContents()).toEqual(slots)
-    await page.getByRole('button', { name: 'Play duo track' }).click()
-    await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: 'Stop', exact: true }).click()
-    const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Download WAV', exact: true }).click()
-    expect((await download).suggestedFilename()).toBe('Trade Test.wav')
-    await page.goto('/#/beats')
-    await page.getByRole('tab', { name: /Saved/i }).click()
-    await page.locator('.saved-row__main', { hasText: 'Trade Test' }).click()
-    await expect(page.getByText('COMBINED TRACK SCORE')).toBeVisible()
-    await page.reload()
-    await expect(page.getByText('COMBINED TRACK SCORE')).toBeVisible()
+    for (const p of [host, guest])
+      await p.getByRole('button', { name: 'Ready to perform', exact: true }).click()
+    await expect(host.getByRole('button', { name: 'Start shared performance' })).toBeEnabled()
+    await host.getByRole('button', { name: 'Start shared performance' }).click()
+    for (const p of [host, guest]) await expect(p.getByLabel('Performance mode')).toBeVisible()
+    for (const p of [host, guest])
+      await expect(p.locator('.duo-live h2')).toContainText('Scotty', { timeout: 15000 })
+    const positions = await Promise.all(
+      [host, guest].map((p) => p.getByLabel('Performance mode').getAttribute('data-time')),
+    )
+    expect(Math.abs(Number(positions[0]) - Number(positions[1]))).toBeLessThan(0.2)
+    for (const p of [host, guest])
+      await expect(p.locator('.duo-live h2')).toContainText('Alex', { timeout: 20000 })
+    for (const p of [host, guest])
+      await expect(p.getByText('COMBINED TRACK SCORE')).toBeVisible({ timeout: 50000 })
+    const getSession = async (p: typeof host) =>
+      p.evaluate(async () => {
+        const db = await new Promise<IDBDatabase>((ok, no) => {
+          const r = indexedDB.open('rap-but-ranked')
+          r.onsuccess = () => ok(r.result)
+          r.onerror = () => no(r.error)
+        })
+        return await new Promise<any>((ok) => {
+          const r = db.transaction('multiplayer').objectStore('multiplayer').getAll()
+          r.onsuccess = () => {
+            db.close()
+            ok(r.result[0])
+          }
+        })
+      })
+    const hs = await getSession(host),
+      gs = await getSession(guest)
+    expect(hs.id).toBe(gs.id)
+    expect(hs.turns.map((t: any) => t.take.id)).toEqual(gs.turns.map((t: any) => t.take.id))
+    expect(new Set(hs.turns.map((t: any) => t.take.id)).size).toBe(2)
+    const download = host.waitForEvent('download')
+    await host.getByRole('button', { name: 'Download WAV', exact: true }).click()
+    const file = await download
+    expect(file.suggestedFilename()).toBe('Remote Trade.wav')
+    await file.saveAs(
+      resolve(
+        'test-results',
+        `remote-${style.startsWith('Standard') ? 'standard' : 'quick'}-${boundary === 'Clean' ? 'clean' : 'overlap'}.wav`,
+      ),
+    )
+    if (style.startsWith('Standard') && boundary === 'Clean') {
+      const original = hs.turns[1].take.id
+      await host.getByRole('button', { name: 'Retake my slot 1', exact: true }).click()
+      await expect(host.getByRole('button', { name: 'Retake my slot 1', exact: true })).toBeEnabled(
+        { timeout: 30000 },
+      )
+      await expect
+        .poll(async () => (await getSession(guest)).turns[0].take.id)
+        .not.toBe(hs.turns[0].take.id)
+      expect((await getSession(guest)).turns[1].take.id).toBe(original)
+    }
+    await guest.reload()
+    await expect(guest.getByText('COMBINED TRACK SCORE')).toBeVisible({ timeout: 20000 })
+    await guest.goto(`${app}#/beats`)
+    await guest.getByRole('tab', { name: /Saved/i }).click()
+    await guest.locator('.saved-row__main', { hasText: 'Remote Trade' }).click()
+    await expect(guest.getByText('COMBINED TRACK SCORE')).toBeVisible()
     expect(errors).toEqual([])
+    await a.close()
+    await b.close()
   })
 }

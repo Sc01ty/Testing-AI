@@ -30,11 +30,11 @@ async function bpmShown(page: Page) {
   return Number(await page.getByTestId('bpm-value').textContent())
 }
 
-test('empty library → upload MP3 → analysis → save → survives refresh', async ({ page }) => {
+test('included library → upload MP3 → analysis → save → survives refresh', async ({ page }) => {
   const errors = collectErrors(page)
   await openLibrary(page)
-  await expect(page.getByText('No beats yet')).toBeVisible()
-  await expect(page.getByText('Upload your first beat to start building tracks.')).toBeVisible()
+  await expect(page.locator('.beat-row')).toHaveCount(9)
+  await expect(page.locator('.library')).not.toContainText(/bank fees/i)
 
   await upload(page, MP3)
   expect(await bpmShown(page)).toBe(92)
@@ -60,7 +60,7 @@ test('empty library → upload MP3 → analysis → save → survives refresh', 
   await expect(row).toBeVisible()
   await expect(row).toContainText('92')
   await expect(row).toContainText('0:28')
-  await expect(page.getByTestId('beat-count')).toContainText('1 beat')
+  await expect(page.getByTestId('beat-count')).toContainText('10 beats')
 
   await page.reload()
   await expect(page.locator('.beat-row', { hasText: 'Late Night Loop' })).toBeVisible()
@@ -144,10 +144,10 @@ test('several beats; only one preview plays at a time; leaving stops it', async 
   await openLibrary(page)
   await upload(page, MP3)
   await page.getByRole('button', { name: 'Save beat' }).click()
-  await expect(page.locator('.beat-row')).toHaveCount(1)
+  await expect(page.locator('.beat-row')).toHaveCount(10)
   await upload(page, WAV)
   await page.getByRole('button', { name: 'Save beat' }).click()
-  await expect(page.locator('.beat-row')).toHaveCount(2)
+  await expect(page.locator('.beat-row')).toHaveCount(11)
 
   const rows = page.locator('.beat-row')
   await rows.nth(0).getByRole('button', { name: /^Play / }).click()
@@ -176,7 +176,7 @@ test('several beats; only one preview plays at a time; leaving stops it', async 
   // first visit to the menu in this tab plays the brand sting
   await expect(page.locator('.title')).toHaveAttribute('data-phase', 'menu', { timeout: 5000 })
   await page.locator('.menu__item', { hasText: 'BEATS' }).click()
-  await expect(page.locator('.beat-row')).toHaveCount(2)
+  await expect(page.locator('.beat-row')).toHaveCount(11)
   await expect(page.locator('.beat-row[data-playing]')).toHaveCount(0)
   expect(errors).toEqual([])
 })
@@ -220,9 +220,10 @@ test('edit name / BPM / offset and delete with confirmation', async ({ page }) =
   await expect(renamed).toBeVisible()
   await renamed.getByRole('button', { name: /^Delete / }).click()
   await renamed.getByRole('button', { name: 'Delete', exact: true }).click()
-  await expect(page.getByText('No beats yet')).toBeVisible()
+  await expect(page.locator('.beat-row',{hasText:'Renamed'})).toHaveCount(0)
+  await expect(page.locator('.beat-row')).toHaveCount(9)
   await page.reload()
-  await expect(page.getByText('No beats yet')).toBeVisible()
+  await expect(page.locator('.beat-row')).toHaveCount(9)
 })
 
 test('Play and Freestyle can see saved beats', async ({ page }) => {
@@ -230,7 +231,7 @@ test('Play and Freestyle can see saved beats', async ({ page }) => {
   await upload(page, MP3)
   await page.getByLabel('Beat name').fill('For Play')
   await page.getByRole('button', { name: 'Save beat' }).click()
-  await expect(page.locator('.beat-row')).toHaveCount(1)
+  await expect(page.locator('.beat-row')).toHaveCount(10)
   await page.goto('/#/play')
   await page.locator('.modes__item', { hasText: 'SINGLEPLAYER' }).click()
   await page.locator('.modes__item', { hasText: 'PLAY' }).click()

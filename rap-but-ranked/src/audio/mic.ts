@@ -38,6 +38,7 @@ class Mic {
   get source(): MediaStreamAudioSourceNode | null {
     return this.node
   }
+  get mediaStream(): MediaStream | null { return this.stream }
 
   /** Must be called from a click (it may show the browser's permission prompt). */
   ensure(): Promise<boolean> {

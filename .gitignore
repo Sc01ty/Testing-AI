@@ -39,3 +39,4 @@ rap-but-ranked/dist/
 rap-but-ranked/test-results/
 rap-but-ranked/playwright-report/
 rap-but-ranked/*.tsbuildinfo
+rap-but-ranked/scripts/generated/

@@ -26,7 +26,7 @@ import { settingsStore } from '../settings/settings'
 import { deleteSession, getBeat, hasCompletedTrack, latestActiveSession, listSessions, onSavedChange, saveSession } from '../storage'
 import '../components/play/play.css'
 import './views.css'
-import { DuoView } from '../multiplayer/DuoView'
+import { RoomView } from '../multiplayer/RoomView'
 
 /** Remember which session was open, so a refresh drops you straight back in. */
 const OPEN_KEY = 'rbr.openSession'
@@ -374,6 +374,6 @@ export function PlayView() {
     window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)
   },[mode,active])
   if(mode==='single') return <><button className="btn btn--quiet modes__back" onClick={()=>setMode(null)}><span>← Singleplayer / Multiplayer</span></button><SingleplayerView/></>
-  if(mode==='multi') return <PageShell id="play" compact><DuoView onLeave={()=>setMode(null)}/></PageShell>
+  if(mode==='multi') return <PageShell id="play" compact><RoomView onLeave={()=>setMode(null)}/></PageShell>
   return <PageShell id="play"><div className="modes"><ul className="modes__list">{(['single','multi'] as const).map((m,i)=><li key={m} className="enter" style={{'--i':i+2} as React.CSSProperties}><button className="menu__item modes__item" data-active={active===i?'':undefined} onFocus={()=>setActive(i)} onPointerEnter={()=>{if(active!==i){setActive(i);audio.play('hover')}}} onClick={()=>{audio.unlock();audio.play('confirm');setMode(m)}}><span className="menu__index">0{i+1}</span><span className="menu__label">{m==='single'?'SINGLEPLAYER':'MULTIPLAYER'}</span><span className="menu__tagline">{m==='single'?'Your bars. Your track. Your rank.':'Two players. One beat. Trade the story.'}</span></button></li>)}</ul></div></PageShell>
 }
