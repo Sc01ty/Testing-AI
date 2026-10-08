@@ -6,6 +6,8 @@ The player writes and performs their own lyrics. The app sets challenges, judges
 
 > **Status: core loop playable.** Upload a beat → pick a topic → write 2 bars → preview → record → listen back → submit → get scored → get a next challenge that follows your story → repeat → finish the song, play it back and download it. Freestyle is still a preview.
 
+**Play it in your browser:** https://sc01ty.github.io/Testing-AI/ (Chrome or Edge on desktop; allow the microphone when asked). It rebuilds automatically on every push to `main` (`.github/workflows/deploy-rap-but-ranked.yml`).
+
 ## Run it
 
 First time (Windows Command Prompt, macOS or Linux terminal):
