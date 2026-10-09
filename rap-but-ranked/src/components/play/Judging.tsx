@@ -88,9 +88,11 @@ export function Judging({
     if (stage === DONE) afterRef.current?.scrollIntoView({ behavior: isReducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
   }, [stage, SCORE, DONE])
 
+  useEffect(() => audio.preloadScoreNotes(), [])
+  // the scoring rise: each category score lands on the next note up, the round score on the top C6
   useEffect(() => {
-    if (stage >= 1 && stage <= n) audio.play('toggle')
-    if (stage === SCORE) audio.play('scoreReveal')
+    if (stage >= 2 && stage <= n) audio.playRise(stage - 2, n)
+    if (stage === SCORE) audio.playRise(n - 1, n)
     if (stage === RANK) audio.play(result.rank === 'S' || result.rank === 'A' ? 'impactBig' : 'impact')
     if (stage === DONE) audio.play('swish')
   }, [stage, result.rank, n, SCORE, RANK, DONE])

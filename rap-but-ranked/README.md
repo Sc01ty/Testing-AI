@@ -2,6 +2,10 @@
 
 **Write 2 bars. Rap them. Get ranked. Build the song.**
 
+## v0.12 — the scoring rise
+
+The judging reveal (singleplayer rounds and freestyle results) plays the supplied notes as the scores land: a whole-tone climb from C5 to C6 (`public/audio/ui/score-notes/`). Each category score lands on the next note up, and the round score always lands on the top C6, followed by the rank impact. Rounds with more reveals than notes start a whole tone or two lower by pitching C5 down. Each MP3's ~28 ms of encoder silence is skipped and the notes are loaded before the reveal, so every note starts with its number. The levels are evened out (the higher notes were ~3 dB quieter) with a slight build towards the top. The notes go through the UI volume and mute. They replace the per-category tick and the score chime. Multiplayer shows its section scores on a card with no step-by-step reveal, so it doesn't use the rise. `e2e/score-rise.spec.ts` logs every note as it starts and checks the order and its sync with the reveal.
+
 ## v0.11 — the bouncing-ball Rhyme Run, and Relay vs Parallel
 
 **Freestyle → Rhyme Run** (now the default mode) uses the Rhyme Game timing idea in Rap But Ranked's own look. Every bar is a row: `1 · 2 · 3 · TARGET`. A ball bounces on every beat. Rap anything you like on beats 1–3, then land the target word with the ball on beat 4. Rows come in rhyme families checked against the pronunciation dictionary (ground / sound / found / round). The next row slides up early enough to see the rhyme coming.

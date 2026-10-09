@@ -52,6 +52,30 @@ export const UI_SOUNDS: Record<UiSoundId, SoundDef> = {
   remove: { source: { kind: 'synth', recipe: synth.remove }, minIntervalMs: 300 },
 }
 
+/**
+ * The scoring rise: the user's seven notes, a whole-tone climb C5 → C6.
+ * `db` evens out their loudness (the top notes were mastered ~3 dB quieter).
+ */
+export const SCORE_NOTES: { url: string; db: number }[] = [
+  { url: 'audio/ui/score-notes/c5.mp3', db: 0 },
+  { url: 'audio/ui/score-notes/d5.mp3', db: 0.4 },
+  { url: 'audio/ui/score-notes/e5.mp3', db: 1.2 },
+  { url: 'audio/ui/score-notes/fs5.mp3', db: 1.3 },
+  { url: 'audio/ui/score-notes/gs5.mp3', db: 1.8 },
+  { url: 'audio/ui/score-notes/as5.mp3', db: 1.9 },
+  { url: 'audio/ui/score-notes/c6.mp3', db: 2.8 },
+]
+
+/**
+ * Which note (and pitch) plays for reveal `i` of `count`: the last reveal is
+ * always the top C6, each earlier one a whole tone below. Rounds with more
+ * reveals than notes start below C5 by pitching C5 down in whole tones.
+ */
+export function riseNote(i: number, count: number) {
+  const top = SCORE_NOTES.length - 1
+  const step = top - (count - 1 - i)
+  return step >= 0 ? { note: step, rate: 1 } : { note: 0, rate: 2 ** ((step * 2) / 12) }
+}
 
 export type MusicTrackId = 'menu'
 

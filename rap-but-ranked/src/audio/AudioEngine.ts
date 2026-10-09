@@ -1,5 +1,5 @@
 import { settingsStore, type Settings } from '../settings/settings'
-import { MUSIC_TRACKS, UI_SOUNDS, perceptualGain, type MusicTrackId, type UiSoundId } from './sounds'
+import { MUSIC_TRACKS, SCORE_NOTES, UI_SOUNDS, perceptualGain, riseNote, type MusicTrackId, type UiSoundId } from './sounds'
 
 /**
  * One AudioContext for the whole app, with separate buses:
@@ -265,6 +265,48 @@ class AudioEngine {
     set(this.clickBus.gain, perceptualGain(s.metronomeVolume) * 0.5)
   }
 
+  /** Load the scoring notes ahead of the reveal, so the first one isn't late. */
+  preloadScoreNotes() {
+    if (!this.ctx) return
+    for (const n of SCORE_NOTES) void this.loadNote(n.url)
+  }
+
+  /**
+   * Reveal `i` of `count` in the scoring rise (low → high, the last is C6).
+   * Starts on the next audio tick, skipping each file's encoder silence so the
+   * note lands with the number; louder and slightly fuller as it climbs.
+   */
+  playRise(i: number, count: number) {
+    const ctx = this.ctx
+    if (!ctx || ctx.state !== 'running' || this.settings.muted || count < 1) return
+    const { note, rate } = riseNote(i, count)
+    const def = SCORE_NOTES[note]
+    const climb = count > 1 ? i / (count - 1) : 1
+    void this.loadNote(def.url).then((n) => {
+      if (!n) return
+      const out = ctx.createGain()
+      out.gain.value = 0.3 * 10 ** (def.db / 20) * (0.82 + 0.28 * climb)
+      out.connect(this.uiBus)
+      const src = ctx.createBufferSource()
+      src.buffer = n.buffer
+      src.playbackRate.value = rate
+      src.connect(out)
+      src.onended = () => out.disconnect()
+      src.start(ctx.currentTime + 0.005, n.onset)
+    })
+  }
+
+  /** A note's buffer and where its sound actually starts (MP3s carry ~28 ms of leading silence). */
+  private notes = new Map<string, Promise<{ buffer: AudioBuffer; onset: number } | null>>()
+  private loadNote(url: string) {
+    let p = this.notes.get(url)
+    if (!p) {
+      p = this.loadBuffer(url).then((buffer) => (buffer ? { buffer, onset: soundOnset(buffer) } : null))
+      this.notes.set(url, p)
+    }
+    return p
+  }
+
   /** Quiet, cancellable anticipation through the same UI volume/mute bus. */
   startAnalysis(): () => void {
     const ctx=this.ctx
@@ -297,6 +339,14 @@ class AudioEngine {
   private emit() {
     this.listeners.forEach((fn) => fn())
   }
+}
+
+/** Seconds to the first sample above -50 dBFS (a hair before it, so the attack is intact). */
+export function soundOnset(buffer: AudioBuffer) {
+  const data = buffer.getChannelData(0)
+  const thr = 10 ** (-50 / 20)
+  for (let i = 0; i < data.length; i++) if (Math.abs(data[i]) > thr) return Math.max(0, i / buffer.sampleRate - 0.002)
+  return 0
 }
 
 export const audio = new AudioEngine()
