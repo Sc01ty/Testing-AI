@@ -80,6 +80,11 @@ for (const [style, boundary] of [
         await p.keyboard.press('ArrowLeft')
         expect(Number(await end.getAttribute('aria-valuenow'))).toBeLessThan(Number(before))
       }
+      if (t === 1) {
+        // relay: the director answers what the last player actually said
+        await expect(p.locator('.challenge__prompt')).toContainText(/house|rain|dawn|pain|bills|escaped/i)
+        await expect(other.getByLabel('Waiting for your turn')).toHaveCount(1)
+      }
       await p.getByRole('button', { name: 'Record', exact: true }).click()
       await expect(waiting.locator('.waiting__who')).toContainText(`${name} IS RAPPING`, { timeout: 15000 })
       await expect(p.getByRole('button', { name: 'Record again' })).toBeVisible({ timeout: 30000 })
@@ -144,3 +149,102 @@ for (const [style, boundary] of [
     await b.close()
   })
 }
+
+test('parallel: both write and record at once, sections slot into place', async ({ browser, baseURL }) => {
+  const a = await browser.newContext({ baseURL }),
+    b = await browser.newContext({ baseURL }),
+    host = await a.newPage(),
+    guest = await b.newPage(),
+    errors: string[] = []
+  for (const p of [host, guest]) {
+    p.on('pageerror', (e) => errors.push(e.message))
+    await p.goto(`${app}#/play`)
+    await p.locator('.modes__item', { hasText: 'MULTIPLAYER' }).click()
+  }
+  await host.getByPlaceholder('Your name').fill('Scotty')
+  await host.getByRole('button', { name: 'Create lobby', exact: true }).click()
+  const code = await host.getByTestId('room-code').innerText()
+  await guest.getByPlaceholder('Your name').fill('Alex')
+  await guest.getByPlaceholder('Room code').fill(code)
+  await guest.getByRole('button', { name: 'Join lobby', exact: true }).click()
+  await expect(host.getByText(/Alex · connected/)).toBeVisible()
+  await host.getByPlaceholder('Our track').fill('Both At Once')
+  await host.getByPlaceholder('What are you both rapping about?').fill('success')
+  await host.getByRole('combobox', { name: 'Beat', exact: true }).selectOption('included:fast-hard-trap')
+  await host.getByRole('radio', { name: /^Parallel/ }).click()
+  await host.getByRole('radio', { name: '16 bars', exact: true }).click()
+  await host.getByRole('radio', { name: 'Standard · 4 bars each', exact: true }).click()
+  await host.getByRole('button', { name: 'Start shared track' }).click()
+
+  const HOST = ['Started at the bottom of the stairs', 'Counting every coin I could find', 'Mum kept the lights on for me', 'Now I am climbing all the time']
+  const GUEST = ['Penthouse window with a city view', 'Champagne fizzing in a crystal glass', 'Every promise that I made came true', 'Diamonds dancing as the hours pass']
+  const write = async (p: typeof host, lines: string[]) => {
+    for (let i = 0; i < 4; i++) await p.getByLabel(`Bar ${i + 1}`, { exact: true }).fill(lines[i])
+  }
+  // both studios open at once, on different bars, with paired directions
+  for (const p of [host, guest]) await expect(p.getByTestId('turn-studio')).toBeVisible({ timeout: 20000 })
+  await expect(host.getByTestId('pboard-me')).toContainText('BARS 1–4')
+  await expect(guest.getByTestId('pboard-me')).toContainText('BARS 5–8')
+  await expect(host.locator('.challenge__prompt')).toContainText(/scene|right now/i)
+  await expect(guest.locator('.challenge__prompt')).toContainText(/works out|jump ahead/i)
+  await Promise.all([write(host, HOST), write(guest, GUEST)])
+
+  // record at the same time — each sees the other recording
+  await Promise.all([host, guest].map((p) => p.getByRole('button', { name: 'Record', exact: true }).click()))
+  await expect(host.getByTestId('pboard-mate')).toContainText('RECORDING', { timeout: 15000 })
+  await expect(guest.getByTestId('pboard-mate')).toContainText('RECORDING', { timeout: 15000 })
+  for (const p of [host, guest]) await expect(p.getByRole('button', { name: 'Record again' })).toBeVisible({ timeout: 30000 })
+
+  // guest uploads first and carries on to bars 13–16 without waiting
+  await guest.getByRole('button', { name: 'Submit turn' }).click()
+  await expect(guest.getByTestId('pboard-me')).toContainText('BARS 13–16', { timeout: 20000 })
+  await expect(guest.getByTestId('turn-studio')).toBeVisible({ timeout: 20000 })
+  await expect(host.getByTestId('pboard-mate')).toContainText('BARS 13–16')
+  // no spoilers: the host can't read the guest's bars
+  await expect(host.getByText('Penthouse window')).toHaveCount(0)
+  // a refresh mid-track keeps the guest on their own section
+  await guest.reload()
+  await expect(guest.getByTestId('pboard-me')).toContainText('BARS 13–16', { timeout: 20000 })
+  await expect(guest.getByTestId('turn-studio')).toBeVisible()
+
+  await host.getByRole('button', { name: 'Submit turn' }).click()
+  await expect(host.getByTestId('pboard-me')).toContainText('BARS 9–12', { timeout: 20000 })
+  await Promise.all([write(host, HOST), write(guest, GUEST)])
+  await Promise.all([host, guest].map((p) => p.getByRole('button', { name: 'Record', exact: true }).click()))
+  for (const p of [host, guest]) await expect(p.getByRole('button', { name: 'Record again' })).toBeVisible({ timeout: 30000 })
+  await guest.getByRole('button', { name: 'Submit turn' }).click()
+  // finishing early: locked, waiting — not reset
+  await expect(guest.getByLabel('Your sections are locked')).toContainText('WAITING FOR Scotty', { timeout: 20000 })
+  await host.getByRole('button', { name: 'Submit turn' }).click()
+
+  for (const p of [host, guest]) await expect(p.getByText('COMBINED TRACK SCORE')).toBeVisible({ timeout: 50000 })
+  const read = (p: typeof host) =>
+    p.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((ok) => {
+        const r = indexedDB.open('rap-but-ranked')
+        r.onsuccess = () => ok(r.result)
+      })
+      return await new Promise<any[]>((ok) => {
+        const r = db.transaction('multiplayer').objectStore('multiplayer').getAll()
+        r.onsuccess = () => (db.close(), ok(r.result))
+      })
+    })
+  const [hs] = (await read(host)).filter((x) => x.trackName === 'Both At Once')
+  const [gs] = (await read(guest)).filter((x) => x.trackName === 'Both At Once')
+  expect(hs.game).toBe('parallel')
+  expect(hs.turns.map((t: any) => t.player)).toEqual([0, 1, 0, 1])
+  expect(hs.turns.map((t: any) => t.take.id)).toEqual(gs.turns.map((t: any) => t.take.id))
+  for (const t of hs.turns) {
+    // every take sits in its own bars, whatever order it was uploaded in
+    expect(t.section.start).toBeGreaterThanOrEqual(t.start - 1e-6)
+    expect(t.section.end).toBeLessThanOrEqual(t.end + 1e-6)
+    expect(Math.abs(t.take.beatTimeSec - t.start)).toBeLessThan(1)
+  }
+  expect(hs.turns[1].lyrics[0]).toBe(GUEST[0])
+  const download = host.waitForEvent('download')
+  await host.getByRole('button', { name: 'Download WAV', exact: true }).click()
+  expect((await download).suggestedFilename()).toBe('Both At Once.wav')
+  expect(errors).toEqual([])
+  await a.close()
+  await b.close()
+})

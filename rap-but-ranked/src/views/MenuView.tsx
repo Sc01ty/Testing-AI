@@ -243,7 +243,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
         </span>
       </div>
       <div className="title__chrome title__chrome--br" aria-hidden={!inMenu}>
-        <span className="eyebrow">v0.10</span>
+        <span className="eyebrow">v0.11</span>
       </div>
     </div>
   )

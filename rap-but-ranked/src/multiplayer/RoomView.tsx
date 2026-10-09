@@ -8,7 +8,7 @@ import { mic } from '../audio/mic'
 import { rememberTake, takeSamples } from '../play/takeAudio'
 import type { TrackLength } from '../domain/types'
 import { barBeatLabel, endLabel } from '../play/sectionWindow'
-import { newDuo, duoChallenge, scoreDuoTurn, turnWindow, type DuoSession, type DuoTurn } from './session'
+import { newDuo, duoChallenge, parallelChallenges, batchOf, scoreDuoTurn, turnWindow, type DuoGame, type DuoSession, type DuoTurn } from './session'
 import { roomRequest, roomAudio, type RoomAccess, type RoomState, type TurnActivity } from './roomClient'
 import { RoomVoice } from './voice'
 import { saveDuo, getDuo } from './store'
@@ -42,6 +42,8 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     [beatId, setBeatId] = useState(''),
     [topic, setTopic] = useState(''),
     [trackName, setTrackName] = useState('')
+  const [game, setGame] = useState<DuoGame>('relay')
+  const [myActivity, setMyActivity] = useState<TurnActivity | null>(null)
   const [length, setLength] = useState<TrackLength>(16),
     [style, setStyle] = useState<DuoSession['style']>('standard'),
     [boundary, setBoundary] = useState<DuoTurn['boundary']>('clean')
@@ -129,7 +131,9 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
   const s = room?.session ?? null,
     myPlayer = access?.player ?? 0,
     mate = (1 - myPlayer) as 0 | 1,
-    turn = s?.status === 'active' ? (s.turns.find((t) => !t.take) ?? null) : null,
+    parallel = s?.game === 'parallel',
+    // relay: the room's next section. parallel: each player's own next section.
+    turn = s?.status === 'active' ? (s.turns.find((t) => !t.take && (!parallel || t.player === myPlayer)) ?? null) : null,
     beat = s ? catalogue.find((b) => b.id === s.beatId) : undefined
 
   async function join(action: 'create' | 'join') {
@@ -143,7 +147,11 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     if (!b || !room) return
     const next = newDuo({ players: [room.members[0]!.name, room.members[1]?.name ?? 'Waiting for player'], trackName, beat: b, topic, length, style, boundary })
     next.mode = 'online'
-    next.turns[0].challenge = await duoChallenge(next, 0)
+    next.game = game
+    if (game === 'parallel') {
+      const cs = await parallelChallenges(next, 0)
+      cs.forEach((c, i) => (next.turns[i].challenge = c))
+    } else next.turns[0].challenge = await duoChallenge(next, 0)
     await request('configure', { session: next })
     setSaved(null)
     setNewTrack(false)
@@ -162,8 +170,27 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     }
   }, [room?.version, s?.id])
 
+  // parallel: the first of us to reach a batch asks the director for both of its sections
+  const directing = useRef('')
+  useEffect(() => {
+    if (!s || !parallel || !turn || turn.directed || s.status !== 'active') return
+    const b = batchOf(turn.index)
+    const key = `${s.id}:${b}`
+    if (directing.current === key) return
+    directing.current = key
+    void (async () => {
+      try {
+        await request('direct', { batch: b, challenges: await parallelChallenges(s, b) })
+      } catch (e) {
+        directing.current = ''
+        setError(e instanceof Error ? e.message : 'Could not get your direction. Retrying…')
+      }
+    })()
+  }, [s?.id, room?.version, turn?.index, turn?.directed])
+
   const reportActivity = useCallback(
     (state: TurnActivity) => {
+      setMyActivity(state)
       if (!access || sentActivity.current === state) return
       sentActivity.current = state
       void roomRequest('activity', access, { state }).catch(() => (sentActivity.current = ''))
@@ -182,7 +209,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     const result = scoreDuoTurn(withTake, done, { samples: data.samples, sampleRate: data.sampleRate, startTime: sub.take.beatTimeSec })
     const isRedo = s.status === 'complete'
     const scored = { ...withTake, turns: withTake.turns.map((x) => (x.index === t.index ? { ...done, result } : x)) }
-    const challenge = !isRedo && s.turns[t.index + 1] ? await duoChallenge(scored, t.index + 1) : undefined
+    const challenge = !isRedo && s.game !== 'parallel' && s.turns[t.index + 1] ? await duoChallenge(scored, t.index + 1) : undefined
     const state = await request('submit', { index: t.index, lyrics: sub.lyrics, section: sub.section, take: sub.take, result, challenge }, blob)
     const stored = state.session?.turns[t.index]?.take
     if (stored) {
@@ -194,6 +221,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     void deleteTakeAudio(sub.take.id)
     clearTurnDraft(s, t)
     sentActivity.current = ''
+    setMyActivity(null)
     setRedo(null)
     audio.play('impact')
   }
@@ -261,6 +289,25 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
 
   const configPanel = (
     <Panel title="Choose your shared track">
+      <div className="diff-grid game-modes" role="radiogroup" aria-label="Game mode">
+        {GAMES.map((g) => (
+          <button
+            key={g.id}
+            role="radio"
+            aria-checked={game === g.id}
+            className="diff game-mode"
+            onPointerEnter={(e) => e.pointerType === 'mouse' && game !== g.id && audio.play('hover')}
+            onClick={() => {
+              if (game !== g.id) audio.play('toggle')
+              setGame(g.id)
+            }}
+          >
+            <span className="diff__label">{g.label}</span>
+            <span className="diff__every">{g.tag}</span>
+            <span className="diff__note">{g.note}</span>
+          </button>
+        ))}
+      </div>
       <Field label="Track name">
         <input className="input" placeholder="Our track" maxLength={40} value={trackName} onChange={(e) => setTrackName(e.target.value)} />
       </Field>
@@ -388,7 +435,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
                   {s.beatName} · {s.length} bars · <span className="duo-name duo-player--0">{s.players[0]}</span> × <span className="duo-name duo-player--1">{s.players[1]}</span>
                 </p>
               </header>
-              <TurnStrip s={s} current={turn?.index ?? null} me={myPlayer} />
+              <TurnStrip s={s} current={parallel ? s.turns.filter((t) => !t.take && t.index === s.turns.find((x) => !x.take && x.player === t.player)?.index).map((t) => t.index) : turn ? [turn.index] : []} me={myPlayer} />
               {redo ? (
                 beat && (
                   <TurnStudio
@@ -427,9 +474,36 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
                     )}
                   </div>
                 </>
+              ) : parallel ? (
+                <>
+                  <ParallelBoard s={s} me={myPlayer} myActivity={myActivity} mateActivity={room.activity?.[mate]?.state ?? null} mateOnline={!!room.members[mate]?.online} />
+                  <LastTurn s={s} turn={[...s.turns].reverse().find((t) => t.player === myPlayer && t.take)} />
+                  {turn ? (
+                    turn.directed && beat ? (
+                      <TurnStudio
+                        key={`${s.id}:${turn.index}`}
+                        session={s}
+                        turn={turn}
+                        beat={beat}
+                        busy={busy}
+                        hearPrevious={false}
+                        onSubmit={(sub) => void safe(() => submitTurn(turn, sub))}
+                        onActivity={reportActivity}
+                      />
+                    ) : (
+                      <p className="studio__hint">Getting the director’s call for your bars…</p>
+                    )
+                  ) : (
+                    <section className={`waiting duo-player--${mate}`} aria-label="Your sections are locked">
+                      <span className="eyebrow">SECTION LOCKED</span>
+                      <h2 className="waiting__who">WAITING FOR {s.players[mate]}</h2>
+                      <p className="waiting__next">All your bars are in. The track builds the moment theirs land.</p>
+                    </section>
+                  )}
+                </>
               ) : turn ? (
                 <>
-                  <LastTurn s={s} before={turn.index} />
+                  <LastTurn s={s} turn={s.turns[turn.index - 1]} />
                   {turn.player === myPlayer ? (
                     beat ? (
                       <TurnStudio
@@ -449,7 +523,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
                   )}
                 </>
               ) : null}
-              {s.status !== 'complete' && !redo && <StorySoFar s={s} />}
+              {s.status !== 'complete' && !redo && <StorySoFar s={s} me={myPlayer} />}
               <div className="room-voice">
                 <span>
                   VOICE CHAT · {voiceStatus === 'failed' ? 'Could not connect. Try another network and re-enable voice.' : voiceStatus === 'off' ? 'off (optional)' : voiceStatus}
@@ -472,7 +546,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
             </>
           )}
           <p className="studio__hint">
-            Take turns: whoever's up gets the studio, the other gets ready. Each of you records on your own computer; submitted takes are shared with the room for the finished mix. Wear headphones if voice chat is on. Rooms and server recordings expire after 24 hours; saved tracks stay in your browser.
+            {s?.game === 'parallel' ? 'Parallel: you both write and record your own bars at the same time; nobody hears the other’s until the track is done.' : 'Relay: whoever’s up gets the studio, the other gets ready.'} Each of you records on your own computer; submitted takes are shared with the room for the finished mix. Wear headphones if voice chat is on. Rooms and server recordings expire after 24 hours; saved tracks stay in your browser.
           </p>
         </>
       )}
@@ -485,11 +559,13 @@ function memberLine(room: RoomState) {
 }
 
 /** Every section in order: who has it, which bars, and how it went. */
-function TurnStrip({ s, current, me }: { s: DuoSession; current: number | null; me: 0 | 1 }) {
+function TurnStrip({ s, current, me }: { s: DuoSession; current: number[]; me: 0 | 1 }) {
+  // parallel keeps your mate's sections a surprise until the end
+  const hidden = (t: DuoTurn) => s.game === 'parallel' && s.status !== 'complete' && t.player !== me
   return (
     <div className="duo-timeline" aria-label="Turn order">
       {s.turns.map((t) => (
-        <div key={t.index} className={`duo-slot duo-player--${t.player}`} style={{ flex: t.barEnd - t.barStart }} data-state={t.take ? 'done' : t.index === current ? 'now' : 'next'}>
+        <div key={t.index} className={`duo-slot duo-player--${t.player}`} style={{ flex: t.barEnd - t.barStart }} data-state={t.take ? 'done' : current.includes(t.index) ? 'now' : 'next'}>
           <span>
             {s.players[t.player]}
             {t.player === me ? ' (you)' : ''}
@@ -497,7 +573,7 @@ function TurnStrip({ s, current, me }: { s: DuoSession; current: number | null; 
           <b>
             {t.barStart + 1}–{t.barEnd}
           </b>
-          <small>{t.result ? `${t.result.rank} · ${t.result.score}` : t.index === current ? 'NOW' : 'NEXT'}</small>
+          <small>{t.result ? (hidden(t) ? 'LOCKED' : `${t.result.rank} · ${t.result.score}`) : current.includes(t.index) ? 'NOW' : 'NEXT'}</small>
         </div>
       ))}
     </div>
@@ -505,8 +581,7 @@ function TurnStrip({ s, current, me }: { s: DuoSession; current: number | null; 
 }
 
 /** The section that was just submitted: a quick score reveal both players see. */
-function LastTurn({ s, before }: { s: DuoSession; before: number }) {
-  const t = s.turns[before - 1]
+function LastTurn({ s, turn: t }: { s: DuoSession; turn: DuoTurn | undefined }) {
   if (!t?.result) return null
   return (
     <section className={`turn-result duo-player--${t.player}`} key={t.take?.id} aria-label="Last turn result">
@@ -526,6 +601,7 @@ const DOING: Record<TurnActivity, string> = {
   writing: 'IS WRITING',
   previewing: 'IS RUNNING THE BEAT',
   recording: 'IS RAPPING',
+  retaking: 'IS RETAKING',
   reviewing: 'IS CHECKING THE TAKE',
   submitting: 'IS LOCKING IT IN',
 }
@@ -550,6 +626,7 @@ function Waiting({ s, turn, me, activity, online, joined }: { s: DuoSession; tur
       <p className="waiting__challenge">
         <span className="eyebrow">Their challenge</span> {turn.challenge.prompt}
       </p>
+      {next && <p className="waiting__challenge">Your challenge arrives the moment {s.players[turn.player]} submits — it answers what they just said.</p>}
       <aside className="waiting__tip">
         <span className="eyebrow">Small tip</span>
         <p>{waitingTip(s, turn.index)}</p>
@@ -558,8 +635,9 @@ function Waiting({ s, turn, me, activity, online, joined }: { s: DuoSession; tur
   )
 }
 
-function StorySoFar({ s }: { s: DuoSession }) {
-  const done = s.turns.filter((t) => t.take)
+function StorySoFar({ s, me }: { s: DuoSession; me: 0 | 1 }) {
+  const parallel = s.game === 'parallel'
+  const done = s.turns.filter((t) => t.take && (!parallel || t.player === me))
   if (!done.length) return null
   return (
     <Panel title="The story so far">
@@ -568,6 +646,50 @@ function StorySoFar({ s }: { s: DuoSession }) {
           <b>{s.players[t.player]}</b>: {t.lyrics.join(' / ')}
         </p>
       ))}
+      {parallel && <p className="studio__hint">{s.players[1 - me]}’s bars stay hidden until the track is finished — you’ll hear them in the song.</p>}
     </Panel>
+  )
+}
+
+const GAMES: { id: DuoGame; label: string; tag: string; note: string }[] = [
+  { id: 'relay', label: 'Relay', tag: 'Take turns', note: 'One of you raps while the other gets ready. Every direction answers the bars just submitted — the storytelling mode.' },
+  { id: 'parallel', label: 'Parallel', tag: 'Both at once', note: 'You each get your own bars of the same song and write + record at the same time. Nobody waits. Hear it joined at the end.' },
+]
+
+const STATUS: Record<TurnActivity, string> = {
+  writing: 'WRITING',
+  previewing: 'PREVIEWING',
+  recording: 'RECORDING',
+  retaking: 'RETAKING',
+  reviewing: 'READY',
+  submitting: 'LOCKING IN',
+}
+
+/** Parallel: both players' live sections side by side — what each is on and doing, never what they wrote. */
+function ParallelBoard({ s, me, myActivity, mateActivity, mateOnline }: { s: DuoSession; me: 0 | 1; myActivity: TurnActivity | null; mateActivity: TurnActivity | null; mateOnline: boolean }) {
+  return (
+    <div className="pboard" aria-label="Both players">
+      {([me, (1 - me) as 0 | 1] as const).map((p) => {
+        const mine = p === me
+        const t = s.turns.find((x) => x.player === p && !x.take)
+        const done = s.turns.filter((x) => x.player === p && x.take).length
+        const total = s.turns.filter((x) => x.player === p).length
+        const act = mine ? myActivity : mateActivity
+        const status = !t ? 'ALL LOCKED' : !mine && !mateOnline ? 'RECONNECTING' : !t.directed ? 'GETTING DIRECTION' : STATUS[act ?? 'writing']
+        return (
+          <section key={p} className={`pboard__card duo-player--${p}`} data-active={act === 'recording' || act === 'retaking' ? 'rec' : t ? 'on' : 'done'} data-testid={mine ? 'pboard-me' : 'pboard-mate'}>
+            <span className="eyebrow">{mine ? 'YOU' : s.players[p]}</span>
+            <b className="pboard__bars">{t ? `BARS ${t.barStart + 1}–${t.barEnd}` : 'DONE'}</b>
+            <span className="pboard__status">
+              {(act === 'recording' || act === 'retaking') && t && <i className="waiting__live" aria-hidden />}
+              {status}
+            </span>
+            <small>
+              {done} / {total} sections locked
+            </small>
+          </section>
+        )
+      })}
+    </div>
   )
 }

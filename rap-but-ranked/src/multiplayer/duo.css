@@ -270,3 +270,58 @@
 :root[data-motion='reduced'] .turn-result {
   animation: none;
 }
+
+/* ── game modes + parallel board ──────────────────────────────────── */
+.game-modes {
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 20px;
+}
+.game-mode .diff__label {
+  font-size: clamp(22px, 2.6vw, 30px);
+}
+.pboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pboard__card {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: var(--radius-2);
+  border-top: 3px solid var(--duo-color);
+  background: color-mix(in srgb, var(--duo-color) 7%, rgb(5 4 8 / 0.6));
+  transition: box-shadow 240ms var(--ease-out, ease);
+}
+.pboard__card[data-active='rec'] {
+  box-shadow: 0 0 40px -14px var(--duo-color);
+}
+.pboard__card[data-active='done'] {
+  opacity: 0.6;
+}
+.pboard__bars {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.8vw, 32px);
+}
+.pboard__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  font-size: var(--fs-small);
+  color: var(--duo-color);
+}
+.pboard__status .waiting__live {
+  width: 10px;
+  height: 10px;
+}
+.pboard__card small {
+  color: var(--text-3);
+}
+@media (max-width: 650px) {
+  .game-modes,
+  .pboard {
+    grid-template-columns: 1fr;
+  }
+}

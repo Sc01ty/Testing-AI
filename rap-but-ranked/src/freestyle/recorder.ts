@@ -56,6 +56,16 @@ export class FreestyleRecorder {
   private stopRequested = false
   private cancelled = false
   running = false
+  private clockFn: (() => number) | null = null
+
+  /**
+   * Timeline second you are *hearing* right now (audio clock minus output
+   * latency), or null before the beat is scheduled. Visuals read this every
+   * frame so they follow the actual audio, not a timer.
+   */
+  clock(): number | null {
+    return this.clockFn ? this.clockFn() : null
+  }
 
   stop() {
     this.stopRequested = true
@@ -101,6 +111,8 @@ export class FreestyleRecorder {
     const capture = new Capture(ctx, source)
     const t0 = ctx.currentTime + (plan.startAtMs === undefined ? 0.25 : (plan.startAtMs-Date.now())/1000)
     const zeroAt = t0 + spBar // context time of timeline 0
+    const heard = (ctx.outputLatency || 0) + (ctx.baseLatency || 0)
+    this.clockFn = () => ctx.currentTime - zeroAt - heard + origin
     const scheduled = plan.backing ? scheduleMix(ctx,out,buffer,plan.backing.clips,origin,origin+total,zeroAt) : scheduleMix(ctx, out, buffer, [], -spBar, total + spb, t0, { loop: plan.loop, beatFadeOut: spb })
     const clickOut = audio.clickOutput ?? out
     for (let k = 0; k < plan.beatsPerBar; k++) scheduled.push(countClick(ctx, clickOut, t0 + k * spb, k === 0))
@@ -157,6 +169,7 @@ export class FreestyleRecorder {
 
     cb.onPhase?.('finishing')
     cb.onCount?.(null)
+    this.clockFn = null
     metronome.stop()
     await capture.stop()
     for (const s of scheduled) {

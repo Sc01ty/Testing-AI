@@ -211,7 +211,9 @@ export interface FreestyleResult {
   rank: Rank
   feedback: string[]
   /** Per prompt: did you use it, and the words that show it. */
-  prompts: { word: string; bar: number; hit: boolean; evidence: string[] }[]
+  prompts: { word: string; bar: number; hit: boolean; evidence: string[]; offsetMs?: number | null; near?: string | null }[]
+  /** Rhyme Run: target words heard and how close to beat 4 they landed. */
+  landed?: { hits: number; total: number; grade: Rank | null }
   /** False when speech recognition wasn't available — word-based categories are then left out. */
   transcribed: boolean
   scoredAt: number
@@ -219,6 +221,8 @@ export interface FreestyleResult {
 
 export interface FreestyleSession {
   mode?: FreestyleMode
+  /** Rhyme Run with the bouncing ball: one target per bar, landing on beat 4. (Older rhyme runs used sound-family windows.) */
+  ball?: boolean
   category?: FreestyleCategory
   requestedDurationSec?: number
   promptEvery?: number | null

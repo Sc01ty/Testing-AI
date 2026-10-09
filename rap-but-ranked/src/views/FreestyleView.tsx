@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { audio } from '../audio/AudioEngine'
 import { encodeWav } from '../audio/wav'
 import { BeatSelect } from '../components/beats/BeatSelect'
 import { FreestyleComplete } from '../components/freestyle/FreestyleComplete'
 import { FreestyleLive } from '../components/freestyle/FreestyleLive'
+import { RhymeBall } from '../components/freestyle/RhymeBall'
+import { Landings } from '../components/freestyle/Landings'
+import { beatPlayer, useBeatPlayer } from '../audio/BeatPlayer'
+import { planRhymeRun, RHYME_RUN_RULES, scoreRhymeRun } from '../freestyle/rhymeRun'
+import { getBeatAudio } from '../storage'
+import type { BeatMeta } from '../domain/types'
 import { PageShell } from '../components/layout/PageShell'
 import { Judging } from '../components/play/Judging'
 import { Button, Panel, Segmented, Toggle } from '../components/ui/ui'
@@ -124,7 +130,7 @@ export function FreestyleView() {
         scoreLabel="Freestyle score"
         result={f.result!}
         after={
-          <div className="fs-prompts">
+          f.ball ? <Landings f={f} /> : <div className="fs-prompts">
             {f.result!.prompts.map((p) => (
               <span key={`${p.bar}-${p.word}`} className="fs-chip" data-hit={f.result!.transcribed ? (p.hit ? 'yes' : 'no') : undefined}>
                 <small>bar {p.bar + 1}</small>
@@ -168,7 +174,7 @@ export function FreestyleView() {
 function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; error: string | null }) {
   const { beats } = useBeats()
   const [difficulty, setDifficulty] = useState<FreestyleDifficulty>('medium')
-  const [mode, setMode] = useState<FreestyleMode>('topic')
+  const [mode, setMode] = useState<FreestyleMode>('rhyme')
   const [category,setCategory] = useState<FreestyleCategory>('mixed')
   const [duration, setDuration] = useState<FreestyleDuration>(60)
   const [every, setEvery] = useState<'auto' | 2 | 4 | 8>('auto')
@@ -203,11 +209,11 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
   return (
     <div className="freestyle">
       <div className="freestyle__setup">
-        <Panel title="Mode" i={1}><Segmented<FreestyleMode> label="Mode" value={mode} onChange={setMode} options={[{value:'topic',label:'Topic Run'},{value:'rhyme',label:'Rhyme Run'}]}/><p className="studio__hint">{mode === 'rhyme' ? 'Keep landing words in the shown sound family. Slant rhymes count.' : 'Work the current topic into your freestyle before the next one.'}</p></Panel>
+        <Panel title="Mode" i={1}><Segmented<FreestyleMode> label="Mode" value={mode} onChange={setMode} options={[{value:'rhyme',label:'Rhyme Run'},{value:'topic',label:'Topic Run'}]}/><p className="studio__hint">{mode === 'rhyme' ? 'The ball bounces on every beat. Rap whatever you like on 1, 2, 3 — then land the rhyme word with the ball on 4.' : 'A new topic every few bars — work it in before the next one.'}</p></Panel>
         {mode === 'topic' && <Panel title="Category" i={2}><Segmented<FreestyleCategory> label="Category" value={category} onChange={setCategory} options={(['everyday','personal','absurd','mixed'] as const).map(value=>({value,label:value[0].toUpperCase()+value.slice(1)}))}/></Panel>}
         <Panel title="Difficulty" i={3}>
           <div className="diff-grid" role="radiogroup" aria-label="Difficulty">
-            {DIFFICULTIES.map((d) => (
+            {DIFFICULTIES.map((d) => mode === 'rhyme' ? { ...d, every: RHYME_RUN_RULES[d.id].label === 'Chaos' ? 'Expert' : 'Every bar', note: RHYME_RUN_RULES[d.id].note } : d).map((d) => (
               <button
                 key={d.id}
                 role="radio"
@@ -245,7 +251,7 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
               { value: 120, label: '2 min' },
             ]}
           />
-          <div className="fs-setup__row">
+          {mode === 'topic' && <div className="fs-setup__row">
             <span className="eyebrow">Prompt every</span>
             <Segmented<'auto' | 2 | 4 | 8>
               label="Prompt frequency"
@@ -258,7 +264,7 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
                 { value: 8, label: '8 bars' },
               ]}
             />
-          </div>
+          </div>}
           <div className="fs-setup__row">
             <span className="fs-setup__asr">{asrLine}</span>
             <Toggle label="Transcribe my freestyle" checked={settings.freestyleTranscribe} onChange={(v) => setSettings({ freestyleTranscribe: v })} />
@@ -274,6 +280,11 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
         </Panel>
       </div>
 
+      {mode === 'rhyme' ? (
+        <Panel title="How it works" i={5} className="prompt-preview">
+          <BallPreview beat={beat} difficulty={difficulty} />
+        </Panel>
+      ) : (
       <Panel title="How it works" i={5} className="prompt-preview">
         <div className="prompt-preview__stage" aria-live="off">
           <span key={word} className="prompt-preview__word">
@@ -287,6 +298,7 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
         </div>
         <p className="prompt-preview__note">One bar of count-in, then the beat runs and you don't stop. A new word lands every few bars — work it in before the next one. 🎧 Headphones on.</p>
       </Panel>
+      )}
     </div>
   )
 }
@@ -305,7 +317,9 @@ function Listening({ f, onScored }: { f: FreestyleSession; onScored: (f: Freesty
       const { spb, spBar } = timing(f)
       const { ensureLexicon } = await import('../coach/lexicon')
       await ensureLexicon()
-      const result = scoreFreestyle({ prompts: f.prompts, bars: f.bars, secondsPerBar: spBar, secondsPerBeat: spb, words: transcript?.words ?? null, samples: s.samples, sampleRate: s.sampleRate, startTime: f.take!.startTime })
+      const result = f.ball
+        ? scoreRhymeRun({ prompts: f.prompts, bars: f.bars, secondsPerBeat: spb, beatsPerBar: f.beatGrid.beatsPerBar, words: transcript?.words ?? null, samples: s.samples, sampleRate: s.sampleRate, startTime: f.take!.startTime })
+        : scoreFreestyle({ prompts: f.prompts, bars: f.bars, secondsPerBar: spBar, secondsPerBeat: spb, words: transcript?.words ?? null, samples: s.samples, sampleRate: s.sampleRate, startTime: f.take!.startTime })
       onScored({ ...f, transcript, result })
     },
     [f, onScored],
@@ -364,3 +378,73 @@ function Listening({ f, onScored }: { f: FreestyleSession; onScored: (f: Freesty
     </div>
   )
 }
+
+// ── Rhyme Run: try the ball before you record ────────────────────────
+function BallPreview({ beat, difficulty }: { beat: BeatMeta | null; difficulty: FreestyleDifficulty }) {
+  const player = useBeatPlayer()
+  const bars = 8
+  const prompts = useMemo(() => planRhymeRun(difficulty, bars, 42), [difficulty])
+  const playable = useMemo(() => (beat ? { id: beat.id, getBlob: () => getBeatAudio(beat.id) } : null), [beat])
+  const playing = !!beat && player.playing && player.beatId === beat.id
+  const spBar = beat ? (60 / beat.bpm) * beat.beatsPerBar : 1
+  const end = beat ? Math.min(beat.durationSec, beat.introOffset + bars * spBar) : 0
+  // the ball reads the beat player's own clock, minus what the speakers add
+  const clock = useCallback(() => {
+    if (!beat) return null
+    const pos = beatPlayer.position(beat.id)
+    if (pos === null || !beatPlayer.isPlaying(beat.id)) return null
+    const ctx = audio.context
+    const heard = ctx ? (ctx.outputLatency || 0) + (ctx.baseLatency || 0) : 0
+    return pos - beat.introOffset - heard
+  }, [beat])
+  const paused = useRef<number | null>(null)
+  useEffect(() => () => beatPlayer.stop(), [])
+  useEffect(() => {
+    paused.current = null
+    beatPlayer.stop()
+  }, [beat?.id])
+
+  const toggle = () => {
+    if (!beat || !playable) return
+    audio.unlock()
+    if (playing) {
+      paused.current = beatPlayer.position(beat.id)
+      beatPlayer.pause()
+      return
+    }
+    const from = paused.current !== null && paused.current < end - 0.1 ? paused.current : beat.introOffset
+    paused.current = null
+    void beatPlayer.play(playable, { from, to: end })
+  }
+  const restart = () => {
+    if (!beat || !playable) return
+    audio.unlock()
+    paused.current = null
+    void beatPlayer.play(playable, { from: beat.introOffset, to: end })
+  }
+
+  return (
+    <div className="rr-preview" data-testid="ball-preview">
+      {beat ? (
+        <RhymeBall clock={clock} secondsPerBeat={60 / beat.bpm} beatsPerBar={beat.beatsPerBar} bars={bars} prompts={prompts} difficulty={difficulty} />
+      ) : (
+        <p className="studio__hint">Pick a beat to try the ball.</p>
+      )}
+      <div className="rr-preview__bar">
+        <Button disabled={!beat} onClick={toggle}>
+          {playing ? 'Pause' : paused.current !== null ? 'Resume' : 'Try the ball'}
+        </Button>
+        {beat && (
+          <Button variant="quiet" onClick={restart}>
+            Restart
+          </Button>
+        )}
+        <span className="studio__hint">Practice only — nothing records. The ball follows the beat at {beat ? Math.round(beat.bpm) : '—'} BPM.</span>
+      </div>
+      <p className="prompt-preview__note">
+        1 · 2 · 3 are yours — rap anything. The word lands on 4, with the ball. The next row slides up so you can see the rhyme coming. 🎧 Headphones on.
+      </p>
+    </div>
+  )
+}
+

@@ -6,6 +6,7 @@ import { saveWav } from '../play/fullTrack'
 import { arrangedClips } from '../play/vocals'
 import { getBeatAudio } from '../storage'
 import { planPrompts } from './prompts'
+import { planRhymeRun } from './rhymeRun'
 
 export const DIFFICULTY_LABEL: Record<FreestyleDifficulty, string> = { easy: 'Easy', medium: 'Medium', hard: 'Hard', chaos: 'Chaos' }
 
@@ -38,7 +39,8 @@ export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDiffi
     id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `f_${now}`,
     kind: 'freestyle',
     mode: input.mode ?? 'topic',
-    name: `${DIFFICULTY_LABEL[input.difficulty]} freestyle · ${date}`,
+    ball: input.mode === 'rhyme' ? true : undefined,
+    name: `${DIFFICULTY_LABEL[input.difficulty]} ${input.mode === 'rhyme' ? 'rhyme run' : 'freestyle'} · ${date}`,
     beatId: input.beat.id,
     beatName: input.beat.name,
     beatGrid: { bpm: input.beat.bpm, introOffset: input.beat.introOffset, durationSec: input.beat.durationSec, beatsPerBar: input.beat.beatsPerBar },
@@ -48,7 +50,7 @@ export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDiffi
     promptEvery: input.every,
     bars: shape.bars,
     loop: shape.loop,
-    prompts: planPrompts(input.difficulty, shape.bars, now % 100000, input.every, input.category ?? 'mixed', input.mode ?? 'topic'),
+    prompts: input.mode === 'rhyme' ? planRhymeRun(input.difficulty, shape.bars, now % 100000) : planPrompts(input.difficulty, shape.bars, now % 100000, input.every, input.category ?? 'mixed', 'topic'),
     take: null,
     transcript: null,
     result: null,

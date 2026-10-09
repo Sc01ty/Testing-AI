@@ -35,6 +35,7 @@ async function addBeat(page: Page) {
 
 async function runFreestyle(page: Page, difficulty: string, transcribe: boolean, category = 'Mixed') {
   await page.goto('/#/freestyle')
+  await page.getByRole('radio', { name: 'Topic Run', exact: true }).click()
   await page.getByRole('radio', { name: category, exact: true }).click()
   await page.getByRole('radio', { name: new RegExp(`^${difficulty}`) }).click()
   await page.getByRole('radio', { name: '30 sec' }).click()

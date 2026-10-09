@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { audio } from '../../audio/AudioEngine'
 import type { PlayableBeat } from '../../audio/BeatPlayer'
 import { RecordError } from '../../audio/recordTake'
@@ -12,6 +12,7 @@ import { useMic } from '../../audio/mic'
 import { getBeatAudio } from '../../storage'
 import { Icon } from '../beats/icons'
 import { VocalLane } from '../play/VocalLane'
+import { RhymeBall } from './RhymeBall'
 
 /**
  * The freestyle itself: the beat loops, a word lands every few bars, the
@@ -82,10 +83,13 @@ export function FreestyleLive({
   const barsToNext = next ? next.bar - bar : null
   const chaos = session.difficulty === 'chaos'
 
+  const clock = useCallback(() => recorder.current?.clock() ?? null, [])
+  const ball = !!session.ball
+
   // a soft hit when a new word lands
   const lastIdx = useRef(-1)
   useEffect(() => {
-    if (phase !== 'live' || idx === lastIdx.current) return
+    if (ball || phase !== 'live' || idx === lastIdx.current) return
     lastIdx.current = idx
     audio.play('swish')
   }, [idx, phase])
@@ -119,6 +123,16 @@ export function FreestyleLive({
         </span>
       </div>
 
+      {ball ? (
+        <>
+          <p className="eyebrow fs-live__meta">
+            {session.beatName} · {Math.round(session.beatGrid.bpm)} BPM · Rhyme Run · {session.difficulty} · MIC {mic.status === 'ready' ? 'LIVE' : mic.status}
+            {phase === 'preparing' && ' · getting the mic ready…'}
+          </p>
+          <RhymeBall clock={clock} secondsPerBeat={spb} beatsPerBar={session.beatGrid.beatsPerBar} bars={session.bars} prompts={session.prompts} difficulty={session.difficulty} />
+        </>
+      ) : (
+      <>
       <div className="fs-live__stage" aria-live="polite">
         <p className="eyebrow">{session.beatName} · {Math.round(session.beatGrid.bpm)} BPM · {session.mode === 'rhyme' ? 'Rhyme Run' : 'Topic Run'} · {session.difficulty}{session.mode !== 'rhyme' && ` · ${session.category ?? 'mixed'}`} · MIC {mic.status==='ready'?'LIVE':mic.status}</p>
         {count !== null ? (
@@ -152,6 +166,8 @@ export function FreestyleLive({
         })}
       </div>
       <div className="fs-queue" aria-label="Challenge progression">{session.prompts.slice(Math.max(0,idx-1),idx+3).map(p=><span key={p.bar} data-active={p.bar===prompt.bar}>{p.bar===prompt.bar?'NOW · ':p.bar<bar?'PASSED · ':'NEXT · '}{chaos && p.bar>bar?'???':p.word}</span>)}</div>
+      </>
+      )}
 
       <div className="timeline fs-live__lane" data-recording={phase === 'live' ? '' : undefined}>
         <div className="timeline__lane">
@@ -159,7 +175,7 @@ export function FreestyleLive({
           <VocalLane peaks={live} from={-spb} to={total + 0.6} viewFrom={-spb} viewTo={total + 0.6} recording={phase === 'live'} progress={Math.max(0, Math.min(1, (t + spb) / (total + 0.6 + spb)))} />
         </div>
       </div>
-      <p className="studio__hint">{session.mode === 'rhyme' ? 'Land at least two different words in each sound family.' : 'Work each topic in before the next one.'} Results are checked after recording. Esc throws the take away.</p>
+      <p className="studio__hint">{ball ? 'Rap anything on beats 1–3, then land the word with the ball on 4. Landings are checked after the run, not guessed live.' : session.mode === 'rhyme' ? 'Land at least two different words in each sound family.' : 'Work each topic in before the next one.'} Results are checked after recording. Esc throws the take away.</p>
     </div>
   )
 }

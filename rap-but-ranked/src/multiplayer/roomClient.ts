@@ -1,5 +1,5 @@
 import type { DuoSession } from './session'
-export type TurnActivity = 'writing' | 'previewing' | 'recording' | 'reviewing' | 'submitting'
+export type TurnActivity = 'writing' | 'previewing' | 'recording' | 'retaking' | 'reviewing' | 'submitting'
 export interface RoomAccess {
   code: string
   token: string

@@ -546,3 +546,157 @@
 }
 .fs-queue{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.fs-queue span{padding:12px 18px;border:1px solid rgba(255,255,255,.12);font-size:11px;text-transform:uppercase;letter-spacing:.1em}.fs-queue span[data-active=true]{border-color:#b58cff;color:#b58cff;background:rgba(181,140,255,.08)}.fs-live__stage>.eyebrow{font-size:11px;margin-bottom:22px}.fs-complete .fs-chip{display:flex;flex-direction:column;gap:8px;max-width:320px}.fs-complete .fs-chip small:last-child{line-height:1.7;letter-spacing:0;text-transform:none}.duo-setup .field{display:grid;gap:12px}
 @media(max-width:720px){.page--play .modes__item .menu__label{font-size:clamp(20px,7vw,38px)}}
+
+/* ── Rhyme Run: the bouncing ball ─────────────────────────────────── */
+.rr {
+  --rh: clamp(56px, 9vh, 88px);
+  container-type: inline-size;
+  position: relative;
+  height: calc(var(--rh) * 4.6);
+  overflow: hidden;
+  border-radius: var(--radius-2);
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 34%, rgb(var(--glow) / 0.14), transparent 70%),
+    rgb(5 4 8 / 0.5);
+  box-shadow: 0 0 0 1px var(--line-1) inset;
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 82%, transparent);
+}
+.rr__rows {
+  position: absolute;
+  inset: 0;
+  padding-top: calc(var(--rh) * 1.15);
+  transform: translateY(calc(var(--row) * var(--rh)));
+  transition: transform 260ms var(--ease-out, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.rr__rows[data-reduced] {
+  transition: none;
+}
+.rr__row {
+  position: relative;
+  height: var(--rh);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2.4fr;
+  align-items: end;
+  padding: 0 clamp(12px, 7cqi, 80px) calc(var(--rh) * 0.18);
+  transition:
+    opacity 260ms var(--ease-out, ease),
+    transform 260ms var(--ease-out, ease);
+  transform-origin: 50% 100%;
+}
+.rr__row[data-state='done'] {
+  opacity: 0.18;
+  transform: scale(0.9);
+}
+.rr__row[data-state='next'] {
+  opacity: 0.55;
+  transform: scale(0.86);
+}
+.rr__row[data-far] {
+  opacity: 0;
+}
+.rr__cell {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 4.6cqi, 40px);
+  font-weight: 800;
+  white-space: nowrap;
+  line-height: 1;
+  text-align: center;
+  color: var(--text-3);
+  transition:
+    color 120ms ease,
+    text-shadow 120ms ease,
+    transform 120ms ease;
+}
+.rr__cell--word {
+  text-align: left;
+  padding-left: 0.4em;
+  font-size: clamp(20px, 6.4cqi, 60px);
+  letter-spacing: 0.02em;
+  color: var(--purple-200);
+}
+.rr__cell[data-hidden] {
+  color: var(--text-4);
+}
+.rr__row[data-kind='count'] .rr__cell,
+.rr__row[data-kind='rest'] .rr__cell {
+  font-size: clamp(16px, 3.4cqi, 28px);
+}
+.rr__txt {
+  display: inline-block;
+}
+.rr__tag {
+  position: absolute;
+  right: clamp(12px, 7cqi, 80px);
+  top: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--text-3);
+}
+/* the beat the ball is on lights up; beat 4 lands the word */
+.rr[data-running='true'][data-beat='0'] .rr__row[data-state='now'] .rr__cell:nth-child(1),
+.rr[data-running='true'][data-beat='1'] .rr__row[data-state='now'] .rr__cell:nth-child(2),
+.rr[data-running='true'][data-beat='2'] .rr__row[data-state='now'] .rr__cell:nth-child(3),
+.rr[data-running='true'][data-beat='3'] .rr__row[data-state='now'] .rr__cell:nth-child(4) {
+  color: #fff;
+  text-shadow: 0 0 24px rgb(var(--glow) / 0.9);
+}
+.rr[data-land='word'] .rr__row[data-state='now'] .rr__cell--word {
+  transform: scale(1.07);
+  color: #fff;
+  text-shadow:
+    0 0 18px rgb(var(--glow)),
+    0 0 48px rgb(var(--glow) / 0.8);
+}
+.rr__ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--purple-300) 55%, var(--purple-500));
+  box-shadow: 0 0 22px rgb(var(--glow) / 0.9);
+  will-change: transform;
+  pointer-events: none;
+}
+.rr[data-running='false'] .rr__ball {
+  opacity: 0.4;
+}
+.rr[data-land='word'] .rr__ball {
+  box-shadow:
+    0 0 26px #fff,
+    0 0 60px rgb(var(--glow));
+}
+.rr-preview {
+  display: grid;
+  gap: 12px;
+}
+.rr-preview__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.rr-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rr-results .fs-chip b.rr-offset {
+  font-variant-numeric: tabular-nums;
+}
+.rr-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-size: clamp(18px, 2.6vw, 28px);
+}
+.rr-summary span {
+  color: var(--text-3);
+  font-size: 0.55em;
+  letter-spacing: 0.14em;
+  margin-right: 8px;
+}

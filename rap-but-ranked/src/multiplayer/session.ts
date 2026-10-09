@@ -23,7 +23,16 @@ export interface DuoTurn {
   captureId?: string
   /** Online: where the player put START / END inside their bars (beat-file seconds). */
   section?: { start: number; end: number } | null
+  /** Online: the challenge is the real one for this section (not a placeholder waiting for direction). */
+  directed?: boolean
 }
+
+/**
+ * RELAY — one player at a time; each direction answers the bars just submitted.
+ * PARALLEL — both players write and record at once, each on their own sections;
+ * directions come in pairs per batch and can only use sections already finished.
+ */
+export type DuoGame = 'relay' | 'parallel'
 
 /** Where an online turn's START / END may go: its own bars (plus the overlap beat), never the next player's. */
 export function turnZone(s: Pick<DuoSession, 'beatGrid'>, t: DuoTurn): SectionZone {
@@ -64,6 +73,7 @@ export interface DuoSession {
   version: 1
   kind: 'multiplayer'
   mode?: 'online'
+  game?: DuoGame
   roomCode?: string
   id: string
   trackName: string
@@ -151,6 +161,75 @@ export function basicDuoChallenge(s: DuoSession, index: number): Challenge {
     source: 'basic',
   }
 }
+/** Parallel batch `b` covers turns 2b and 2b+1 (one section each). */
+export const batchOf = (turnIndex: number) => Math.floor(turnIndex / 2)
+
+/**
+ * Directions for a parallel batch: two sections written at the same time, so
+ * neither can answer the other. They split one idea between two angles, and
+ * pick up details only from sections that are already finished.
+ */
+export function basicParallelChallenges(s: DuoSession, batch: number): Challenge[] {
+  const turns = s.turns.slice(batch * 2, batch * 2 + 2)
+  const batches = Math.ceil(s.turns.length / 2)
+  const done = s.turns.filter((t) => t.take && t.index < batch * 2)
+  const details = [...new Set(done.slice(-2).flatMap((t) => contentWords(t.lyrics.join(' ')).slice(-2)))].reverse()
+  const topic = s.topic
+  const pairs: [string, string, string][] =
+    batch === 0
+      ? [[`Set the scene: where you are right now with ${topic}`, `Jump ahead: what life looks like if ${topic} works out`, 'opening']]
+      : batch === batches - 1
+        ? [[`Bring it back to where the song started`, `Finish it: what all of this was really for`, 'the ending']]
+        : [
+            [`What's standing in the way of ${topic}`, `Who's with you when it gets hard`, 'the obstacle'],
+            [`The moment it nearly fell apart`, `The moment it turned around`, 'turning point'],
+            [`What ${topic} costs the people around you`, `What you'd never give up for it`, 'stakes'],
+          ]
+  const [a, b, beat] = pairs[(batch - 1 + pairs.length) % pairs.length]
+  return turns.map((t, i) => {
+    const detail = details[i]
+    const text = i === 0 ? a : b
+    return {
+      prompt: `Rap ${t.lyrics.length} bars: ${text}${detail ? ` — pick up “${detail}” from earlier` : ''}.`,
+      focus: [...contentWords(topic), ...(detail ? [detail] : [])],
+      storyBeat: beat,
+      source: 'basic' as const,
+    }
+  })
+}
+
+/** Parallel directions, phrased by the local model when it's ready (validated), else the rules above. */
+export async function parallelChallenges(s: DuoSession, batch: number): Promise<Challenge[]> {
+  const fallback = basicParallelChallenges(s, batch)
+  if (settingsStore.get().aiMode !== 'local' || localModel.getState().status !== 'ready') return fallback
+  try {
+    const turns = s.turns.slice(batch * 2, batch * 2 + 2)
+    const context = {
+      topic: s.topic,
+      players: turns.map((t) => s.players[t.player]),
+      section: `${batch + 1} of ${Math.ceil(s.turns.length / 2)}`,
+      finished: s.turns.filter((t) => t.take && t.index < batch * 2).map((t) => ({ player: s.players[t.player], lyrics: t.lyrics })),
+    }
+    const raw = await localModel.chat(
+      [
+        {
+          role: 'system',
+          content:
+            'You direct two rappers writing different parts of one song AT THE SAME TIME, so neither hears the other first. Give each a different, complementary angle on the same idea. Each is one sentence, at most 16 words, one task, never lyrics. Reply JSON {"a": string, "b": string}.',
+        },
+        { role: 'user', content: JSON.stringify(context) },
+      ],
+      { maxTokens: 160, temperature: 0.7, timeoutMs: 30000, jsonSchema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, required: ['a', 'b'] } },
+    )
+    const obj = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? '{}')
+    const out = [String(obj.a ?? '').trim(), String(obj.b ?? '').trim()].slice(0, turns.length)
+    if (out.some((p) => p.length < 12 || p.split(/\s+/).length > 18 || /\n|\s\/\s/.test(p)) || out[0] === out[1]) return fallback
+    return fallback.map((c, i) => ({ ...c, prompt: `${turns[i].lyrics.length} bars · ${out[i]}`, source: 'local-ai' as const }))
+  } catch {
+    return fallback
+  }
+}
+
 export async function duoChallenge(s: DuoSession, index: number): Promise<Challenge> {
   const fallback = basicDuoChallenge(s, index),
     turn = s.turns[index]

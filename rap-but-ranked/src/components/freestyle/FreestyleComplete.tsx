@@ -8,6 +8,7 @@ import { formatBytes } from '../../lib/format'
 import { Icon } from '../beats/icons'
 import { openSavedShelf } from '../../app/navigation'
 import { VocalLane } from '../play/VocalLane'
+import { Landings } from './Landings'
 
 /** A scored freestyle: rank, categories, which prompts you used, what you said, playback and export. */
 export function FreestyleComplete({
@@ -106,6 +107,11 @@ export function FreestyleComplete({
         ))}
       </section>
 
+      {f.ball ? (
+        <section className="enter" style={{ '--i': 3 } as CSSProperties} aria-label="Landings">
+          <Landings f={f} />
+        </section>
+      ) : (
       <section className="fs-prompts enter" style={{ '--i': 3 } as CSSProperties} aria-label="Prompts">
         {r.prompts.map((p) => (
           <span key={`${p.bar}-${p.word}`} className="fs-chip" data-hit={r.transcribed ? (p.hit ? 'yes' : 'no') : undefined} title={p.hit ? `You said: ${p.evidence.join(', ')}` : r.transcribed ? 'Not heard' : ''}>
@@ -116,6 +122,7 @@ export function FreestyleComplete({
           </span>
         ))}
       </section>
+      )}
 
       <section className="song-timeline enter" style={{ '--i': 4 } as CSSProperties} aria-label="Freestyle timeline">
         <div className="fs-live__bars fs-live__bars--small" aria-hidden style={{ '--bars': f.bars } as CSSProperties}>

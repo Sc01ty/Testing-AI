@@ -63,6 +63,7 @@ export function TurnStudio({
   beat,
   busy,
   redo = false,
+  hearPrevious = true,
   onSubmit,
   onActivity,
   onCancel,
@@ -72,6 +73,8 @@ export function TurnStudio({
   beat: Pick<BeatMeta, 'id' | 'peaks' | 'durationSec' | 'bpm' | 'introOffset' | 'beatsPerBar'>
   busy: boolean
   redo?: boolean
+  /** Relay: the previous section leads into your count-in and playback. Parallel: off — no spoilers before the finished song. */
+  hearPrevious?: boolean
   onSubmit: (s: TurnSubmission) => void
   onActivity: (a: TurnActivity) => void
   onCancel?: () => void
@@ -100,7 +103,7 @@ export function TurnStudio({
   const [settings, setSettings] = useSettings()
   const clickGrid = useMemo(() => ({ origin: grid.introOffset, secondsPerBeat: spb, beatsPerBar: grid.beatsPerBar }), [grid.introOffset, spb, grid.beatsPerBar])
   const prev = session.turns[turn.index - 1]
-  const prevTake = prev?.take ?? null
+  const prevTake = (hearPrevious && prev?.take) || null
   const recorder = useRef<TakeRecorder | null>(null)
   const [phase, setPhase] = useState<RecordPhase | 'idle'>('idle')
   const [count, setCount] = useState<number | null>(null)
@@ -116,7 +119,7 @@ export function TurnStudio({
   const color = PLAYER_COLORS[turn.player]
 
   // tell the room what you're doing, so your mate's screen can say it
-  const activity: TurnActivity = recording ? 'recording' : previewing || playingBack ? 'previewing' : take ? 'reviewing' : 'writing'
+  const activity: TurnActivity = recording ? (take ? 'retaking' : 'recording') : previewing || playingBack ? 'previewing' : take ? 'reviewing' : 'writing'
   useEffect(() => {
     if (!busy) onActivity(activity)
   }, [activity, busy, onActivity])

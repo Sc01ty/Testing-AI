@@ -157,6 +157,52 @@ test('lobby access, authority, immutable turns, signalling and closure', async (
     assert.equal(redo.session.turns[0].result.score, 90)
     assert.equal(redo.session.turns[1].take.id, done.session.turns[1].take.id)
   })
+  await t.test('parallel: both players work at once, ownership and direction are server-side', async () => {
+    const room = await call('create', {}, { name: 'P1' })
+    const a = { code: room.code, token: room.token }
+    const joined = await call('join', { code: room.code }, { name: 'P2' })
+    const b = { code: room.code, token: joined.token }
+    const plan = {
+      ...session,
+      game: 'parallel',
+      length: 16,
+      turns: Array.from({ length: 4 }, (_, i) => ({ ...session.turns[0], index: i, player: i % 2, challenge: { prompt: `Batch direction ${i}`, focus: [], storyBeat: 'opening', source: 'basic' } })),
+    }
+    const cfg = await call('configure', a, { session: plan })
+    assert.equal(cfg.status, 200)
+    assert.equal(cfg.session.game, 'parallel')
+    assert.deepEqual(cfg.session.turns.map((t) => t.directed), [true, true, false, false])
+    assert.equal(cfg.session.turns[1].challenge.prompt, 'Batch direction 1')
+    const at = (i) => ({ start: beat.introOffset + i * count * spbar, end: beat.introOffset + (i + 1) * count * spbar })
+    const tk = (i) => ({ ...take(0), beatTimeSec: at(i).start - 0.3 })
+    // P2 can't take P1's bars, nor skip ahead to their own later section
+    assert.equal((await submit(b, { index: 0, lyrics, section: at(0), take: tk(0), result })).status, 403)
+    assert.equal((await submit(b, { index: 3, lyrics, section: at(3), take: tk(3), result })).status, 409)
+    // P2 finishes first: upload order doesn't decide placement
+    const p2 = await submit(b, { index: 1, lyrics, section: at(1), take: tk(1), result })
+    assert.equal(p2.status, 200)
+    assert.deepEqual(p2.session.turns[1].section, at(1))
+    // P2's next section has no direction yet → can't submit it, can direct only their own next batch
+    assert.equal((await submit(b, { index: 3, lyrics, section: at(3), take: tk(3), result })).status, 409)
+    const dir = (n) => [0, 1].map((k) => ({ prompt: `Batch ${n}.${k}`, focus: [], storyBeat: 'x', source: 'basic' }))
+    assert.equal((await call('direct', a, { batch: 1, challenges: dir(1) })).status, 409) // P1 is still on batch 0
+    const d1 = await call('direct', b, { batch: 1, challenges: dir(1) })
+    assert.equal(d1.status, 200)
+    assert.deepEqual(d1.session.turns.map((t) => t.directed), [true, true, true, true])
+    // a second direction for the same batch is ignored (first writer wins)
+    const again = await call('direct', b, { batch: 1, challenges: dir(9) })
+    assert.equal(again.session.turns[2].challenge.prompt, 'Batch 1.0')
+    // P1 still on bars 1–4 while P2 locks bars 13–16
+    assert.equal((await submit(b, { index: 3, lyrics, section: at(3), take: tk(3), result })).status, 200)
+    assert.equal((await submit(a, { index: 2, lyrics, section: at(2), take: tk(2), result })).status, 409)
+    assert.equal((await submit(a, { index: 0, lyrics, section: { start: at(1).start, end: at(1).end }, take: tk(0), result })).status, 400) // can't reach into P2's bars
+    assert.equal((await submit(a, { index: 0, lyrics, section: at(0), take: tk(0), result })).status, 200)
+    const last = await submit(a, { index: 2, lyrics, section: at(2), take: tk(2), result })
+    assert.equal(last.session.status, 'complete')
+    assert.deepEqual(last.session.turns.map((t) => [t.player, t.section.start]), [0, 1, 2, 3].map((i) => [i % 2, at(i).start]))
+    // relay rooms can't be directed in pairs
+    assert.equal((await call('direct', h, { batch: 0, challenges: dir(0) })).status, 409)
+  })
   await t.test('signals delivered only to the other authenticated participant', async () => {
     await call('signal', h, { signal: { type: 'hello', from: 'host' } })
     const state = await call('poll', g)

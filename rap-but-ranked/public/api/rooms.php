@@ -46,17 +46,29 @@ if($action==='configure'){
  if(!$beat||!in_array($s['length']??0,[8,16,32],true)||!in_array($s['style']??'', ['standard','quick'],true))fail('Select an included beat and valid track settings.');
  $bpm=$s['beatGrid']['bpm']??0;$origin=$s['beatGrid']['introOffset']??-1;if(!is_numeric($bpm)||$bpm<40||$bpm>240||!is_numeric($origin)||$origin<0||$origin+$s['length']*240/$bpm>$beat['durationSec'])fail('That length does not fit the beat.');
  $count=$s['style']==='standard'?4:2;if(count($s['turns']??[])!==$s['length']/$count)fail('Invalid turn plan.');
+ $game=($s['game']??'relay')==='parallel'?'parallel':'relay';$s['game']=$game;
  $s['id']='room-'.$code.'-'.substr(bin2hex(random_bytes(4)),0,8);$s['mode']='online';$s['roomCode']=$code;$s['players']=[$r['members'][0]['name'],$r['members'][1]['name']??'Waiting for player'];$s['trackName']=text($s['trackName'],80);$s['topic']=text($s['topic'],160);$s['status']='active';$s['master']=null;$s['beatGrid']['durationSec']=$beat['durationSec'];$s['beatGrid']['beatsPerBar']=4;
- foreach($s['turns'] as $i=>&$t){$t['index']=$i;$t['player']=$i%2;$t['barStart']=$i*$count;$t['barEnd']=($i+1)*$count;$t['start']=$origin+$i*$count*240/$bpm;$t['end']=$origin+($i+1)*$count*240/$bpm;$t['boundary']=$i&&($t['boundary']??'')==='overlap'?'overlap':'clean';$t['vocalOffset']=$t['boundary']==='overlap'?-60/$bpm:0;$t['lyrics']=array_fill(0,$count,'');$t['take']=null;$t['result']=null;$t['ready']=false;$t['section']=null;if($i)$t['challenge']=$s['turns'][0]['challenge'];}unset($t);
+ foreach($s['turns'] as $i=>&$t){$t['index']=$i;$t['player']=$i%2;$t['barStart']=$i*$count;$t['barEnd']=($i+1)*$count;$t['start']=$origin+$i*$count*240/$bpm;$t['end']=$origin+($i+1)*$count*240/$bpm;$t['boundary']=$i&&($t['boundary']??'')==='overlap'?'overlap':'clean';$t['vocalOffset']=$t['boundary']==='overlap'?-60/$bpm:0;$t['lyrics']=array_fill(0,$count,'');$t['take']=null;$t['result']=null;$t['ready']=false;$t['section']=null;
+  // relay: turn 1 is directed now, the rest as each turn is handed over. parallel: sections are directed in pairs (batches).
+  $t['directed']=$game==='parallel'?$i<2:$i===0;if(!$t['directed'])$t['challenge']=$s['turns'][0]['challenge'];if(!is_array($t['challenge'])||!in_array($t['challenge']['source']??'',['basic','local-ai'],true))fail('Invalid director response.');$t['challenge']['prompt']=text($t['challenge']['prompt']??'',600);}unset($t);
  $r['session']=$s;$r['activity']=[null,null];$r['version']++;
 }elseif($action==='activity'){
- $state=$body['state']??'';if(!in_array($state,['writing','previewing','recording','reviewing','submitting'],true))fail('Invalid activity.');if(!$r['session'])fail('No track yet.',409);
+ $state=$body['state']??'';if(!in_array($state,['writing','previewing','recording','retaking','reviewing','submitting'],true))fail('Invalid activity.');if(!$r['session'])fail('No track yet.',409);
  $r['activity']=$r['activity']??[null,null];$r['activity'][$player]=['state'=>$state,'at'=>now()];
+}elseif($action==='direct'){
+ // parallel: directions for a pair of sections, written once. The first request wins; later ones are no-ops.
+ if(!$r['session']||($r['session']['game']??'relay')!=='parallel')fail('Only parallel tracks are directed in pairs.',409);
+ $batch=$body['batch']??-1;$a=$batch*2;if(!is_int($batch)||!isset($r['session']['turns'][$a]))fail('Unknown batch.');
+ $mine=null;foreach($r['session']['turns'] as $i=>$x)if($x['player']===$player&&empty($x['take'])){$mine=$i;break;}
+ if($mine===null||intdiv($mine,2)!==$batch)fail('Direct the sections you are about to write.',409);
+ $cs=$body['challenges']??null;if(!is_array($cs))fail('Invalid director response.');
+ if(empty($r['session']['turns'][$a]['directed'])){foreach([$a,$a+1] as $k=>$i){if(!isset($r['session']['turns'][$i]))continue;$c=$cs[$k]??null;if(!is_array($c)||!in_array($c['source']??'',['basic','local-ai'],true))fail('Invalid director response.');$c['prompt']=text($c['prompt']??'',600);$r['session']['turns'][$i]['challenge']=$c;$r['session']['turns'][$i]['directed']=true;}$r['version']++;}
 }elseif($action==='submit'){
  if(!$r['session'])fail('No track yet.',409);$turns=$r['session']['turns'];$index=$body['index']??-1;
  if(!is_int($index)||!isset($turns[$index]))fail('Unknown section.');$t=$turns[$index];if($t['player']!==$player)fail('That is your mate’s section.',403);
- $complete=$r['session']['status']==='complete';
- if(!$complete){$first=null;foreach($turns as $i=>$x)if(empty($x['take'])){$first=$i;break;}if($index!==$first)fail('Wait for your turn.',409);}
+ $complete=$r['session']['status']==='complete';$parallel=($r['session']['game']??'relay')==='parallel';
+ // relay: the whole room goes in order. parallel: each player goes through their own sections in order, at the same time.
+ if(!$complete){$first=null;foreach($turns as $i=>$x)if(empty($x['take'])&&(!$parallel||$x['player']===$player)){$first=$i;break;}if($index!==$first)fail($parallel?'Finish your earlier section first.':'Wait for your turn.',409);if(empty($t['directed']))fail('This section has no direction yet.',409);}
  $lyrics=$body['lyrics']??null;if(!is_array($lyrics)||count($lyrics)!==count($t['lyrics']))fail('Complete every bar.');foreach($lyrics as &$line){$line=text($line,1000);if($line==='')fail('Complete every bar.');}unset($line);
  $sec=$body['section']??null;$bar=240/$r['session']['beatGrid']['bpm'];$lo=$t['start']+$t['vocalOffset'];
  if(!is_array($sec)||!is_numeric($sec['start']??null)||!is_numeric($sec['end']??null)||$sec['start']<$lo-0.01||$sec['end']>$t['end']+0.01||$sec['end']-$sec['start']<$bar-0.01)fail('Keep your section inside your own bars.');
@@ -68,10 +80,10 @@ if($action==='configure'){
  $audioId=bin2hex(random_bytes(12));$metadata['id']='room-'.$code.':'.$audioId;$metadata['beatId']=$r['session']['beatId'];if(!move_uploaded_file($file['tmp_name'],$dir.'/'.$audioId.'.wav'))fail('Could not store vocal audio.',503);
  $old=$t['take']['id']??'';if($old&&preg_match('/:([a-f0-9]{24})$/',$old,$m)&&is_file($dir.'/'.$m[1].'.wav'))unlink($dir.'/'.$m[1].'.wav');
  $t['lyrics']=$lyrics;$t['section']=['start'=>(float)$sec['start'],'end'=>(float)$sec['end']];$t['take']=$metadata;$t['captureId']=$metadata['id'];$t['result']=$result;$t['ready']=true;$r['session']['turns'][$index]=$t;
- if(!$complete&&isset($turns[$index+1])&&isset($body['challenge'])){$c=$body['challenge'];if(!is_array($c))fail('Invalid director response.');$c['prompt']=text($c['prompt']??'',600);if(!in_array($c['source']??'', ['basic','local-ai'],true))fail('Invalid director response.');$r['session']['turns'][$index+1]['challenge']=$c;}
+ if(!$complete&&!$parallel&&isset($turns[$index+1])&&isset($body['challenge'])){$c=$body['challenge'];if(!is_array($c))fail('Invalid director response.');$c['prompt']=text($c['prompt']??'',600);if(!in_array($c['source']??'', ['basic','local-ai'],true))fail('Invalid director response.');$r['session']['turns'][$index+1]['challenge']=$c;$r['session']['turns'][$index+1]['directed']=true;}
  if(is_string($body['storyDirection']??null))$r['session']['storyDirection']=text($body['storyDirection'],300);
  $done=true;foreach($r['session']['turns'] as $x)if(empty($x['take']))$done=false;if($done)$r['session']['status']='complete';
- $r['session']['updatedAt']=now();$r['activity']=[null,null];$r['version']++;
+ $r['session']['updatedAt']=now();$r['activity']=$r['activity']??[null,null];$r['activity'][$player]=null;$r['version']++;
 }elseif($action==='leave'){
  if($player===0)$r['closed']=true;else{$r['members'][1]=null;$r['signals']=[[],[]];}$r['version']++;
 }elseif($action==='signal'){
