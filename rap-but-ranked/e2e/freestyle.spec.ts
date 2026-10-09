@@ -65,7 +65,7 @@ test('freestyle without speech recognition: audio-only scoring, saved, plays bac
   await expect(page.locator('.judging')).toBeVisible({ timeout: 60000 })
   await page.waitForTimeout(400)
   await page.keyboard.press('Space')
-  await expect(page.locator('.cat[data-state="shown"]')).toHaveCount(2)
+  await expect(page.locator('.cat[data-state="shown"]')).toHaveCount(3)
   await expect(page.locator('.feedback')).toContainText(/speech recognition/i)
   await page.getByRole('button', { name: 'See the breakdown' }).click()
 
@@ -113,7 +113,7 @@ test('freestyle with on-device speech recognition: prompts, rhyme and variety fr
   await expect(page.locator('.judging:not(.fs-listening)')).toBeVisible({ timeout: 480000 })
   await page.waitForTimeout(400)
   await page.keyboard.press('Space')
-  await expect(page.locator('.cat[data-state="shown"]')).toHaveCount(5)
+  await expect(page.locator('.cat[data-state="shown"]')).toHaveCount(6)
   await expect(page.locator('.cat').first()).toContainText('Prompts')
   await shot(page, 'f2-judging')
   await page.getByRole('button', { name: 'See the breakdown' }).click()

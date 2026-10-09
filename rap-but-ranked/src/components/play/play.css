@@ -1445,3 +1445,8 @@
   text-transform: uppercase;
   color: var(--text-4);
 }
+
+.adlib-panel { padding: 20px; margin: 20px 0; border: 1px solid rgba(155,100,255,.25); background: rgba(155,100,255,.04); border-radius: 14px; }
+.fs-category-disabled {opacity:.5;pointer-events:none}
+.cat details {font-size:12px;margin-top:8px;color:var(--muted)}
+.cat details summary {cursor:pointer}

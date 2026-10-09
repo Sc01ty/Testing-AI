@@ -44,6 +44,7 @@ export function duoObservations(s: DuoSession): string[] {
   return notes.slice(0, 4)
 }
 export interface DuoSession {
+  adlibs?: import('../domain/types').AdlibLayer[]
   version: 1
   kind: 'multiplayer'
   mode?: 'online'
@@ -122,16 +123,13 @@ export function basicDuoChallenge(s: DuoSession, index: number): Challenge {
   const turn = s.turns[index],
     prior = s.turns[index - 1]
   const anchor = prior ? contentWords(prior.lyrics.join(' ')).slice(-3).join(', ') : s.topic
-  const action =
-    index === 0
-      ? `Open your shared song about ${s.topic}`
-      : index === s.turns.length - 1
-        ? `Bring both of your stories to a conclusion, answering ${s.players[prior.player]}'s idea about ${anchor}`
-        : index % 3 === 2
-          ? `Respond to ${s.players[prior.player]}'s idea about ${anchor} and introduce a problem that affects you both`
-          : `Respond to ${s.players[prior.player]}'s idea about ${anchor} and add your own specific detail`
+  const detail = anchor.split(', ').slice(-1)[0]
+  const action = index === 0 ? `Open your shared song about ${s.topic}`
+    : index === s.turns.length - 1 ? `Finish the story ${s.players[prior.player]} started about ${detail}`
+    : index % 3 === 2 ? `What could stop ${s.players[prior.player]}'s plans for ${detail}?`
+    : `Answer ${s.players[prior.player]}'s idea about ${detail}`
   return {
-    prompt: `Write ${turn.lyrics.length} bars. ${action}.`,
+    prompt: `Rap ${turn.lyrics.length} bars: ${action.replace(/\?$/, '')}.`,
     focus: contentWords(anchor),
     storyBeat: index === 0 ? 'opening' : 'response',
     source: 'basic',
@@ -162,7 +160,7 @@ export async function duoChallenge(s: DuoSession, index: number): Promise<Challe
         {
           role: 'system',
           content:
-            'You direct a rap duo. Give one short contextual instruction, never lyrics. Reply JSON with a single prompt string. Address the incoming player, respond to the latest lyrics and develop the shared story.',
+            'You direct a rap duo. Give one sentence, at most 20 words, in everyday language; one task only, never lyrics. Reply JSON with a single prompt string. Address the incoming player, respond to the latest lyrics and develop the shared story.',
         },
         { role: 'user', content: JSON.stringify(context) },
       ],
@@ -182,7 +180,7 @@ export async function duoChallenge(s: DuoSession, index: number): Promise<Challe
     const anchor = fallback.focus
     if (
       p.length < 15 ||
-      p.length > 280 ||
+      p.split(/\s+/).length > 20 || /[.!?].+\S/.test(p) ||
       /\n|\s\/\s/.test(p) ||
       !/\b(write|rap|respond|develop|introduce|explain|describe)\b/i.test(p) ||
       (index > 0 && !anchor.some((w) => p.toLowerCase().includes(w.toLowerCase()))) ||
@@ -245,9 +243,10 @@ export function scoreDuoTurn(
     categories: avg.averages.map((c) => ({
       ...c,
       basis: c.category === 'performance' ? 'audio' : 'lyrics',
+      confidence: c.category === 'rhyme' ? (results.some(r=>r.categories.find(x=>x.category==='rhyme')?.confidence !== 'medium') ? 'low' : 'medium') : undefined,
       reasons: results
         .flatMap((r) => r.categories.find((x) => x.category === c.category)?.reasons ?? [])
-        .slice(0, 3),
+        .slice(0, 8),
     })),
     feedback: [
       ...results[0].feedback,

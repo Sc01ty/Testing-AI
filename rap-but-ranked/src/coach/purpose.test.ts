@@ -22,7 +22,7 @@ describe('purposeful director', () => {
     expect(out.next?.spec?.skill).toBe('meaning-first')
     expect(out.next?.spec?.reason).toMatch(/latest bars/)
     expect(out.next?.prompt).toMatch(/mum/i) // the story thread is kept
-    expect(out.next?.prompt).toMatch(/say first|meaning/i)
+    expect(out.next?.spec?.trainingHint).toMatch(/say first|meaning/i)
   })
 
   it('uses the rolling profile when the latest bars were fine', async () => {
@@ -30,8 +30,8 @@ describe('purposeful director', () => {
       ctx([['I left school at sixteen for a job down at the shop', 'Saved up every wage until the day I had enough']], { weakest: 'imagery', tendencies: [{ id: 'vague', label: 'too general to picture', kind: 'weakness', skill: 'imagery', count: 6, of: 10 }] }),
     )
     expect(out.next?.spec?.skill).toBe('imagery')
-    expect(out.next?.spec?.constraints[0]).toMatchObject({ kind: 'avoid-words' })
-    expect(out.next?.prompt).toMatch(/no “/)
+    expect(out.next?.spec?.constraints).toEqual([])
+    expect(out.next?.spec?.trainingHint).toMatch(/no “/)
   })
 
   it('advanced players get invisible-punchline stretch goals', async () => {
@@ -40,7 +40,7 @@ describe('purposeful director', () => {
     ]
     const out = await basicDirector.afterRound({ ...ctx(clean, { level: 4 }), rounds: [...ctx(clean).rounds, ...ctx(clean).rounds] })
     expect(out.next?.spec?.skill).toBe('invisible-punchline')
-    expect(out.next?.prompt).toMatch(/double meaning|means something different/i)
+    expect(out.next?.spec?.trainingHint).toMatch(/double meaning|means something different/i)
   })
 
   it('every challenge says why it exists (spec with reason), constraints are checkable or marked subjective', async () => {

@@ -1,5 +1,5 @@
 import type { Challenge } from '../domain/types'
-import { contentWords, words } from '../lyrics/text'
+import { contentWords } from '../lyrics/text'
 import { peopleIn, topicWords } from '../lyrics/themes'
 import type { SkillProfile } from './profile'
 import type { ChallengeSpec, ChallengeType, CoachReport, Constraint, SkillId } from './types'
@@ -108,8 +108,6 @@ export function purposeFor(input: PurposeInput): { spec: ChallengeSpec; clause: 
 export function withPurpose(story: Challenge, input: PurposeInput): Challenge {
   const p = purposeFor(input)
   if (!p) return { ...story, spec: story.spec ?? { type: input.nextIndex ? 'storytelling' : 'topic', skill: 'story', difficulty: (input.profile?.level ?? 1) as 1, constraints: [], context: input.topic, reason: input.nextIndex ? 'move the song on' : 'open the song' } }
-  const base = story.prompt.trim().replace(/[.!]?$/, '.')
-  // keep it readable: story first, then the one thing to train
-  const prompt = words(base).length + words(p.clause).length > 46 ? base : `${base} ${p.clause}`
-  return { ...story, prompt, spec: p.spec }
+  // Training remains optional coaching; the story prompt stays one readable task.
+  return { ...story, spec: { ...p.spec, constraints: [], trainingHint:p.clause } }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Field, Panel, Segmented } from '../components/ui/ui'
 import { includedBeats, type IncludedBeat } from '../storage/includedBeats'
 import { getBeatAudio, saveTakeAudio, getTakeAudio } from '../storage'
+import { ensureLexicon } from '../coach/lexicon'
 import { audio } from '../audio/AudioEngine'
 import { mic, useMic } from '../audio/mic'
 import { beatPlayer } from '../audio/BeatPlayer'
@@ -20,7 +21,7 @@ import {
 } from './session'
 import { roomRequest, roomAudio, type RoomAccess, type RoomState } from './roomClient'
 import { RoomVoice } from './voice'
-import { saveDuo } from './store'
+import { saveDuo, getDuo } from './store'
 import { DuoView } from './DuoView'
 import { localModel } from '../director/localModel'
 import { settingsStore } from '../settings/settings'
@@ -192,6 +193,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     await request('lock', { index: turn.index, lyrics: draft, challenge })
   }
   async function enableVoice() {
+    await ensureLexicon()
     audio.unlock()
     if (!(await mic.ensure())) throw new Error(mic.getState().message ?? 'Enable your microphone.')
     if (s && audio.context)
@@ -282,6 +284,7 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
         peaks: rec.peaks,
         recordedAt: Date.now(),
       }
+      await ensureLexicon()
       const results: Record<string, RoundResult> = {}
       for (const t of session.turns.filter((t) => t.player === myPlayer))
         results[t.index] = scoreDuoTurn(session, t, {
@@ -325,7 +328,8 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
     if (!access || !state.session || saving.current) return
     saving.current = true
     try {
-      const session = state.session
+      const local = await getDuo(state.session.id)
+      const session = {...state.session, adlibs:local?.adlibs}
       const takes = new Map(
         session.turns.flatMap((t) => (t.take ? [[t.take.id, t.take] as const] : [])),
       )

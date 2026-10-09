@@ -20,7 +20,7 @@ export const aiConfig = { timeoutMs: 45_000, helpTimeoutMs: 30_000 }
 const SYSTEM = `You direct a rap game. The player writes a song 2 bars at a time. You never write lyrics for them.
 Reply with JSON:
 - "reaction": one short sentence to the player about their latest bars (say "you"/"your").
-- "next_challenge": one sentence telling them what their NEXT 2 bars should be about. It must be about the FOCUS you are given and push the story on. Start with "Write 2 bars".
+- "next_challenge": one sentence telling them what their NEXT 2 bars should be about. It must be about the FOCUS you are given and push the story on. Use everyday words, at most 18 words. Start with "Write 2 bars". One task only, no extra constraints.
 - "story_direction": 3-8 words, where the song is heading.
 
 Example 1
@@ -56,9 +56,9 @@ export function validChallenge(text: string, ctx: DirectorContext): string | nul
   let t = text.replace(/\s+/g, ' ').trim().replace(/^["“']|["”']$/g, '')
   if (!t) return null
   const n = words(t).length
-  if (n < 5 || n > 34) return null
+  if (n < 5 || n > 20) return null
   // looks like lyrics: line breaks, slashes between lines, or long quoted passages
-  if (/\n|\s\/\s/.test(text) || /["“][^"”]{40,}["”]/.test(t)) return null
+  if (/\n|\s\/\s|[.!?].+\S/.test(text) || /["“][^"”]{40,}["”]/.test(t)) return null
   // must be an instruction ("Write 2 bars about…"), optionally after a short lead-in — never bars themselves
   if (!/\b(write|rap|spit|give me)\s+(2|two)\s+bars?\b/i.test(t)) return null
   const prev = ctx.rounds.map((r) => r.challenge.prompt.toLowerCase())
@@ -107,8 +107,10 @@ export const llmDirector: Director = {
     const stage = stageFor(nextIndex, ctx.totalRounds)
     const focus = chooseFocus(ctx)
     const latest = ctx.rounds[ctx.rounds.length - 1]
-    const earlier = ctx.rounds.slice(-3, -1).map((r) => `${r.lyrics[0]} / ${r.lyrics[1]}`)
+    const earlier = ctx.rounds.slice(0, -1).map((r) => `Challenge: ${r.challenge.prompt}\nLyrics: ${r.lyrics[0]} / ${r.lyrics[1]}`)
     const user = `Song topic: ${ctx.topic}
+Story so far: ${storyDirectionFor(ctx)}
+People mentioned: ${peopleIn(ctx.rounds.flatMap(r => r.lyrics).join(' ')).join(', ')}
 ${earlier.length ? `Earlier bars:\n${earlier.join('\n')}\n` : ''}Latest bars:
 ${latest.lyrics[0]}
 ${latest.lyrics[1]}

@@ -85,7 +85,7 @@ describe('scoreFreestyle', () => {
     const v = voice(8, () => true)
     const r = scoreFreestyle({ prompts, bars: 8, secondsPerBar: SPBAR, secondsPerBeat: SPB, words: null, ...v })
     expect(r.transcribed).toBe(false)
-    expect(r.categories.map((c) => c.category)).toEqual(['continuity', 'flow'])
+    expect(r.categories.map((c) => c.category)).toEqual(['continuity', 'timing', 'flow'])
     expect(r.feedback.join(' ')).toMatch(/speech recognition/i)
   })
   it('freezing costs continuity, with the bars named', () => {

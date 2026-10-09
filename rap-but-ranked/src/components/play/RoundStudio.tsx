@@ -247,6 +247,7 @@ export function RoundStudio({
           <span className={`source-tag source-tag--${round.challenge.source}`}>{round.challenge.source === 'local-ai' ? 'Rap AI' : 'Basic director'}</span>
         </span>
         <h2 className="challenge__prompt">{round.challenge.prompt}</h2>
+        {round.challenge.spec?.trainingHint && <details><summary>Optional coach tip</summary><p className="studio__hint">{round.challenge.spec.trainingHint}</p></details>}
       </section>
 
       <section className="bars enter" style={{ '--i': 3 } as CSSProperties}>

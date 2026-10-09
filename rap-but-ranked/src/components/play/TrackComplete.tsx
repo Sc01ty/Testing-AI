@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { AdlibPanel } from './AdlibPanel'
+import { saveSession } from '../../storage'
 import { audio } from '../../audio/AudioEngine'
 import { trackPlayer, useTrackPlayer } from '../../audio/trackPlayer'
 import type { VocalClip } from '../../audio/mix'
@@ -22,7 +24,7 @@ export type Tab = 'lyrics' | 'rounds'
  * play on their own.
  */
 export function TrackComplete({
-  session,
+  session: originalSession,
   beat,
   saved = false,
   initialTab = 'lyrics',
@@ -38,6 +40,8 @@ export function TrackComplete({
   onNew?: () => void
   onDelete?: () => void
 }) {
+  const [session,setSession] = useState(originalSession)
+  useEffect(()=>setSession(originalSession),[originalSession])
   const results = session.rounds.map((r) => r.result!).filter(Boolean)
   const final = finalResult(results)
   const grid = gridOf(session, beat)!
@@ -135,7 +139,7 @@ export function TrackComplete({
   // timeline: beat lane + vocal regions where they really are
   const shapes: VocalShape[] = useMemo(() => {
     const byId = new Map(session.rounds.filter((r) => r.take).map((r) => [r.take!.id, r]))
-    return (track?.clips ?? []).map((c) => {
+    return (track?.clips ?? []).filter(c => byId.has(c.id ?? '')).map((c) => {
       const r = byId.get(c.id ?? '')!
       return {
         key: c.id ?? '',
@@ -276,6 +280,10 @@ export function TrackComplete({
           </button>
         )}
       </section>
+
+      <AdlibPanel sessionId={session.id} beatId={session.beatId} bpm={grid.bpm} beatsPerBar={grid.beatsPerBar} layers={session.adlibs}
+        makeBacking={async()=>{audio.unlock();return buildFullTrack({...session,adlibs:[]},beat?{...beat,...grid}:{id:session.beatId,...grid},audio.context!,{withBeat:!!beat})}}
+        onKeep={async(adlibs)=>{trackPlayer.stop();const next={...session,adlibs,updatedAt:Date.now()};await saveSession(next);setSession(next)}}/>
 
       <section className="complete__tabs enter" style={{ '--i': 5 } as CSSProperties}>
         <div className="tabs" role="tablist">

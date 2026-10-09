@@ -98,9 +98,9 @@ export function FreestyleLive({
           <b>{t < 0 ? '—' : `${bar + 1} / ${session.bars}`}</b>
         </span>
         <span className="fs-live__stat">
-          <span className="eyebrow">Time</span>
+          <span className="eyebrow">Remaining</span>
           <b>
-            {formatTime(Math.max(0, Math.min(total, t)))} / {formatTime(total)}
+            {formatTime(Math.max(0, total - Math.max(0,t)))}
           </b>
         </span>
         <span className="fs-live__tools">
@@ -120,7 +120,7 @@ export function FreestyleLive({
       </div>
 
       <div className="fs-live__stage" aria-live="polite">
-        <p className="eyebrow">{session.beatName} · {Math.round(session.beatGrid.bpm)} BPM · {session.category ?? 'mixed'} · MIC {mic.status==='ready'?'LIVE':mic.status}</p>
+        <p className="eyebrow">{session.beatName} · {Math.round(session.beatGrid.bpm)} BPM · {session.mode === 'rhyme' ? 'Rhyme Run' : 'Topic Run'} · {session.difficulty}{session.mode !== 'rhyme' && ` · ${session.category ?? 'mixed'}`} · MIC {mic.status==='ready'?'LIVE':mic.status}</p>
         {count !== null ? (
           <span className="countdown countdown--inline" key={`c${count}`}>
             {count}
@@ -159,7 +159,7 @@ export function FreestyleLive({
           <VocalLane peaks={live} from={-spb} to={total + 0.6} viewFrom={-spb} viewTo={total + 0.6} recording={phase === 'live'} progress={Math.max(0, Math.min(1, (t + spb) / (total + 0.6 + spb)))} />
         </div>
       </div>
-      <p className="studio__hint">Keep going — no stopping. Work each word in before the next one lands. Esc throws the take away.</p>
+      <p className="studio__hint">{session.mode === 'rhyme' ? 'Land at least two different words in each sound family.' : 'Work each topic in before the next one.'} Results are checked after recording. Esc throws the take away.</p>
     </div>
   )
 }

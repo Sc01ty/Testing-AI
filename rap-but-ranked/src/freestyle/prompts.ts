@@ -1,4 +1,4 @@
-import type { FreestyleCategory, FreestyleDifficulty, FreestylePrompt } from '../domain/types'
+import type { FreestyleCategory, FreestyleDifficulty, FreestyleMode, FreestylePrompt } from '../domain/types'
 
 /**
  * Freestyle prompt words and when they land.
@@ -34,12 +34,13 @@ export function rng(seed: number) {
  * The prompts for a freestyle of `bars` bars. `every` overrides the
  * difficulty's spacing (Chaos stays unpredictable unless overridden).
  */
-export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed: number, every?: number | null, category?: FreestyleCategory): FreestylePrompt[] {
+export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed: number, every?: number | null, category?: FreestyleCategory, mode: FreestyleMode = 'topic'): FreestylePrompt[] {
   const rand = rng(seed)
   const categories = {everyday:EASY,personal:['family','hometown','your mum','your ex','first car','dreams','regret','loyalty','ambition','proving them wrong'],absurd:WEIRD,mixed:PROMPT_BANKS[difficulty]}
   const concepts:Record<string,string[]>={everyday:['unpaid rent','missed train','empty fridge','school pressure'],personal:['broken trust','fear of failing','leaving home','a promise you broke'],absurd:['a penguin landlord','a microwave election','time travelling pigeons','a haunted gym'],mixed:HARD}
   const chosen=category ? categories[category] : PROMPT_BANKS[difficulty]
   const bank = [...new Set(difficulty==='hard' && category ? [...chosen,...concepts[category],...concepts[category]] : difficulty==='chaos' ? [...chosen,...WEIRD] : chosen)]
+  const rhymeBank = [{word:'-AY',target:'day'},{word:'-IGHT',target:'night'},{word:'-EE',target:'see'},{word:'-OW',target:'go'},{word:'-ACK',target:'back'},{word:'-OO',target:'blue'},{word:'-AIR',target:'care'},{word:'-IDE',target:'ride'}]
   const used = new Set<string>()
   const pick = () => {
     if (used.size >= bank.length) used.clear()
@@ -51,7 +52,12 @@ export function planPrompts(difficulty: FreestyleDifficulty, bars: number, seed:
   const step = every ?? PROMPT_EVERY[difficulty]
   const out: FreestylePrompt[] = []
   for (let bar = 0; bar < bars; ) {
-    out.push({ word: pick(), bar })
+    if (mode === 'rhyme') {
+      const available = rhymeBank.filter(p => !used.has(p.word))
+      const pool = available.length ? available : rhymeBank
+      const p = pool[Math.floor(rand() * pool.length)]
+      used.add(p.word); out.push({ ...p, bar })
+    } else out.push({ word: pick(), bar })
     bar += step ?? [2, 2, 3, 4, 6][Math.floor(rand() * 5)]
   }
   return out

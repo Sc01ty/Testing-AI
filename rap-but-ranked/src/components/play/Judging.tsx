@@ -23,6 +23,7 @@ const WORKING: Record<string, string> = {
   prompts: 'finding the prompts in what you said…',
   continuity: 'checking you kept going…',
   variety: 'counting repeats…',
+  timing: 'checking detected onsets against the grid…',
 }
 const BASIS: Record<CategoryScore['basis'], string> = { audio: 'from your recording', lyrics: 'from your lyrics', transcript: 'from what you said' }
 
@@ -89,11 +90,12 @@ export function Judging({
 
   useEffect(() => {
     if (stage >= 1 && stage <= n) audio.play('toggle')
-    if (stage === SCORE) audio.play('impact')
+    if (stage === SCORE) audio.play('scoreReveal')
     if (stage === RANK) audio.play(result.rank === 'S' || result.rank === 'A' ? 'impactBig' : 'impact')
     if (stage === DONE) audio.play('swish')
   }, [stage, result.rank, n, SCORE, RANK, DONE])
 
+  useEffect(()=>{if(stage >= SCORE || isReducedMotion())return;return audio.startAnalysis()},[stage >= SCORE, SCORE])
   const skip = () => setStage(DONE)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -134,6 +136,8 @@ export function Judging({
                 <i />
               </div>
               <p className="cat__reason">{working ? WORKING[c.category] : shown ? c.reasons[0] : ''}</p>
+              {shown && c.confidence && <span className="eyebrow">Confidence: {c.confidence}</span>}
+              {shown && c.reasons.length > 1 && <details onClick={e => e.stopPropagation()}><summary>Why this score?</summary>{c.reasons.slice(1).map(r => <p className="cat__reason" key={r}>{r}</p>)}</details>}
             </li>
           )
         })}

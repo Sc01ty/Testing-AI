@@ -2,6 +2,7 @@ import { rankForScore } from '../domain/rank'
 import type { CategoryScore, Rank } from '../domain/types'
 import { scoreOriginality, scorePrompt, scoreStory, type LyricContext } from '../scoring/lyricScore'
 import { analysePerformance, scoreFlow, type PerformanceInput } from '../scoring/performance'
+import { evidenceText } from './rhymeEvidence'
 import { vowelName } from './phonetics'
 import type { AssistanceRecord, BarAnalysis, CoachReport, SkillId } from './types'
 
@@ -75,17 +76,17 @@ function rhyme(a: BarAnalysis): CategoryScore {
   const KIND: Record<string, string> = { multi: 'multisyllabic rhyme', perfect: 'perfect rhyme', slant: 'slant rhyme', assonance: 'vowel rhyme', consonance: 'consonant echo, not a rhyme', identical: 'same sound twice', none: 'no rhyme' }
   reasons.push(`${q(w1)} / ${q(w2)} — ${KIND[e.kind]}${a.rhyme.lineMulti >= 2 && e.kind !== 'multi' ? ` (${a.rhyme.lineMulti} syllables match across the line ends)` : ''}`)
   // end rhyme carries most of it; internal rhymes help with diminishing returns (more ≠ better)
-  let s = 30 + e.score * 42 + Math.min(2, Math.max(0, a.rhyme.lineMulti - 1)) * 6
-  const internal = a.rhyme.internal.length
+  let s = 20 + e.score * 62 + Math.min(2, Math.max(0, a.rhyme.lineMulti - 1)) * 6
+  const internal = a.rhyme.evidence ? a.rhyme.evidence.slice(1).length : a.rhyme.internal.length
   s += internal ? 10 + Math.min(10, Math.log2(1 + internal) * 5) : 0
   if (internal) reasons.push(`Internal: ${a.rhyme.internal.slice(0, 2).map((p) => `${q(p.a)}/${q(p.b)}`).join(', ')}`)
   else reasons.push('No internal rhymes')
   if (a.rhyme.stretched) reasons.push(`${a.rhyme.stretched}: stretched pronunciation — works if you commit to it`)
-  if (a.rhyme.continuesPocket) {
+  if (a.rhyme.continuesPocket && e.score > 0) {
     s += 4
     reasons.push(`Keeps the ${vowelName(a.lines[1].pocket ?? '')} rhyme pocket going from the last round`)
   }
-  return { category: 'rhyme', label: 'Rhyme', score: clamp(s), basis: 'lyrics', reasons }
+  return { category: 'rhyme', label: 'Rhyme', score: clamp(s), basis: 'lyrics', confidence: a.rhyme.confidence ?? 'low', reasons: a.rhyme.evidence ? [...a.rhyme.evidence.slice(0, 5).map(evidenceText), `Confidence: ${(a.rhyme.confidence ?? 'low').toUpperCase()} — written pronunciation; accent and delivery can change the match.`, ...reasons.slice(1)] : reasons }
 }
 
 function cadence(a: BarAnalysis): CategoryScore {

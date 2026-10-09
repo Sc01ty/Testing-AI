@@ -7,7 +7,7 @@ import { FreestyleLive } from '../components/freestyle/FreestyleLive'
 import { PageShell } from '../components/layout/PageShell'
 import { Judging } from '../components/play/Judging'
 import { Button, Panel, Segmented, Toggle } from '../components/ui/ui'
-import type { FreestyleCategory, FreestyleDifficulty, FreestyleDuration, FreestyleSession } from '../domain/types'
+import type { FreestyleCategory, FreestyleDifficulty, FreestyleDuration, FreestyleMode, FreestyleSession } from '../domain/types'
 import { ASR_MODEL_NAME, ASR_SIZE_MB, transcriber, useTranscriber } from '../freestyle/asr'
 import type { FreestyleRecording } from '../freestyle/recorder'
 import { scoreFreestyle } from '../freestyle/score'
@@ -146,7 +146,7 @@ export function FreestyleView() {
         beat={beatOf(f)}
         onAgain={() => {
           const b = beatOf(f)
-          const again = b ? newFreestyle({ beat: b, difficulty: f.difficulty, durationSec: f.requestedDurationSec ?? f.bars * timing(f).spBar, every: f.promptEvery ?? null, category:f.category ?? 'mixed' }) : null
+          const again = b ? newFreestyle({ beat: b, difficulty: f.difficulty, durationSec: f.requestedDurationSec ?? f.bars * timing(f).spBar, every: f.promptEvery ?? null, category:f.category ?? 'mixed', mode:f.mode ?? 'topic' }) : null
           if (again) void start(again)
           else go({ kind: 'setup' })
         }}
@@ -168,6 +168,7 @@ export function FreestyleView() {
 function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; error: string | null }) {
   const { beats } = useBeats()
   const [difficulty, setDifficulty] = useState<FreestyleDifficulty>('medium')
+  const [mode, setMode] = useState<FreestyleMode>('topic')
   const [category,setCategory] = useState<FreestyleCategory>('mixed')
   const [duration, setDuration] = useState<FreestyleDuration>(60)
   const [every, setEvery] = useState<'auto' | 2 | 4 | 8>('auto')
@@ -186,7 +187,7 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
 
   const start = () => {
     if (!beat) return
-    const f = newFreestyle({ beat, difficulty, durationSec: duration, every: every === 'auto' ? null : every, category })
+    const f = newFreestyle({ beat, difficulty, durationSec: duration, every: every === 'auto' ? null : every, category, mode })
     if (f) onStart(f)
   }
 
@@ -202,7 +203,8 @@ function Setup({ onStart, error }: { onStart: (f: FreestyleSession) => void; err
   return (
     <div className="freestyle">
       <div className="freestyle__setup">
-        <Panel title="Category" i={2}><Segmented<FreestyleCategory> label="Category" value={category} onChange={setCategory} options={(['everyday','personal','absurd','mixed'] as const).map(value=>({value,label:value[0].toUpperCase()+value.slice(1)}))}/></Panel>
+        <Panel title="Mode" i={1}><Segmented<FreestyleMode> label="Mode" value={mode} onChange={setMode} options={[{value:'topic',label:'Topic Run'},{value:'rhyme',label:'Rhyme Run'}]}/><p className="studio__hint">{mode === 'rhyme' ? 'Keep landing words in the shown sound family. Slant rhymes count.' : 'Work the current topic into your freestyle before the next one.'}</p></Panel>
+        {mode === 'topic' && <Panel title="Category" i={2}><Segmented<FreestyleCategory> label="Category" value={category} onChange={setCategory} options={(['everyday','personal','absurd','mixed'] as const).map(value=>({value,label:value[0].toUpperCase()+value.slice(1)}))}/></Panel>}
         <Panel title="Difficulty" i={3}>
           <div className="diff-grid" role="radiogroup" aria-label="Difficulty">
             {DIFFICULTIES.map((d) => (
@@ -301,6 +303,8 @@ function Listening({ f, onScored }: { f: FreestyleSession; onScored: (f: Freesty
       const s = await takeSamples(f.take!.id)
       if (!s) return setNote("This freestyle's audio is missing — it can't be scored.")
       const { spb, spBar } = timing(f)
+      const { ensureLexicon } = await import('../coach/lexicon')
+      await ensureLexicon()
       const result = scoreFreestyle({ prompts: f.prompts, bars: f.bars, secondsPerBar: spBar, secondsPerBeat: spb, words: transcript?.words ?? null, samples: s.samples, sampleRate: s.sampleRate, startTime: f.take!.startTime })
       onScored({ ...f, transcript, result })
     },

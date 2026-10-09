@@ -3,7 +3,7 @@ import { audio } from '../audio/AudioEngine'
 import { beatPlayer, type PlayableBeat } from '../audio/BeatPlayer'
 import { ClickTrack } from '../audio/metronome'
 import { estimateLatency, mic } from '../audio/mic'
-import { scheduleMix } from '../audio/mix'
+import { scheduleMix, type VocalClip } from '../audio/mix'
 import { Capture, RecordError, countClick, loadWorklet, peakOf } from '../audio/recordTake'
 import { trackPlayer } from '../audio/trackPlayer'
 
@@ -17,6 +17,7 @@ import { trackPlayer } from '../audio/trackPlayer'
  * seamlessly underneath for as long as the freestyle runs.
  */
 export interface FreestylePlan {
+  backing?: {beatBuffer:AudioBuffer|null;clips:VocalClip[];from:number;to:number}
   beat: PlayableBeat
   loop: { start: number; end: number }
   bars: number
@@ -84,7 +85,7 @@ export class FreestyleRecorder {
     const source = mic.source
     if (!ctx || !out || !source) throw new RecordError('Audio is not ready — click anywhere and try again.')
     if (ctx.state !== 'running') await ctx.resume()
-    const [buffer] = await Promise.all([beatPlayer.loadBuffer(plan.beat), loadWorklet(ctx)])
+    const [buffer] = await Promise.all([plan.backing ? Promise.resolve(plan.backing.beatBuffer) : beatPlayer.loadBuffer(plan.beat), loadWorklet(ctx)])
     if (this.cancelled) return null
     beatPlayer.stop()
     trackPlayer.stop()
@@ -93,20 +94,20 @@ export class FreestyleRecorder {
     const sr = ctx.sampleRate
     const spb = plan.secondsPerBeat
     const spBar = spb * plan.beatsPerBar
-    const total = plan.bars * spBar
+    const total = plan.backing ? plan.backing.to - plan.backing.from : plan.bars * spBar
+    const origin = plan.backing?.from ?? 0
     const latency = estimateLatency(ctx)
-    const capture = new Capture(ctx, source)
-
     if (plan.startAtMs !== undefined && plan.startAtMs - Date.now() < 200) throw new RecordError('The shared count-in was missed. Ask the host to reset and start again.')
+    const capture = new Capture(ctx, source)
     const t0 = ctx.currentTime + (plan.startAtMs === undefined ? 0.25 : (plan.startAtMs-Date.now())/1000)
     const zeroAt = t0 + spBar // context time of timeline 0
-    const scheduled = scheduleMix(ctx, out, buffer, [], -spBar, total + spb, t0, { loop: plan.loop, beatFadeOut: spb })
+    const scheduled = plan.backing ? scheduleMix(ctx,out,buffer,plan.backing.clips,origin,origin+total,zeroAt) : scheduleMix(ctx, out, buffer, [], -spBar, total + spb, t0, { loop: plan.loop, beatFadeOut: spb })
     const clickOut = audio.clickOutput ?? out
     for (let k = 0; k < plan.beatsPerBar; k++) scheduled.push(countClick(ctx, clickOut, t0 + k * spb, k === 0))
     const metronome = new ClickTrack()
     metronome.start({ at: zeroAt, from: 0, to: total, grid: { origin: 0, secondsPerBeat: spb, beatsPerBar: plan.beatsPerBar } })
 
-    const winStart = zeroAt - spb + latency // a beat early for pickups
+    const winStart = zeroAt - (plan.backing ? 0 : spb) + latency // a beat early for pickups
     let winEnd = zeroAt + total + TAIL_SEC + latency
     const live = new Array<number>(LIVE_COLUMNS).fill(0)
     let drawn = 0
@@ -131,7 +132,7 @@ export class FreestyleRecorder {
           phase = 'live'
           cb.onPhase?.('live')
         }
-        cb.onTime?.(t)
+        cb.onTime?.(t + origin)
         if (phase === 'live') {
           const span = winEnd - winStart
           for (; drawn < capture.chunks.length; drawn++) {
@@ -168,7 +169,7 @@ export class FreestyleRecorder {
     if (this.cancelled || winEnd <= winStart + 1) return null
 
     const samples = capture.window(winStart, winEnd)
-    const startTime = -spb
+    const startTime = plan.backing ? origin : -spb
     const durationSec = samples.length / sr
     return {
       samples,

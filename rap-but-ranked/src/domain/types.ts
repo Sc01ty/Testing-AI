@@ -98,8 +98,10 @@ export type ScoreCategory =
   | 'prompts'
   | 'continuity'
   | 'variety'
+  | 'timing'
 
 export interface CategoryScore {
+  confidence?: 'medium' | 'low'
   category: ScoreCategory
   label: string
   score: number // 0–100
@@ -143,7 +145,17 @@ export interface BeatGrid {
   beatsPerBar: number
 }
 
+export interface AdlibLayer {
+  id: string
+  startTime: number
+  durationSec: number
+  peaks: number[]
+  muted: boolean
+  recordedAt: number
+}
+
 export interface Session {
+  adlibs?: AdlibLayer[]
   id: string
   trackName: string
   beatId: string
@@ -162,10 +174,12 @@ export interface Session {
 // ── Freestyle ──────────────────────────────────────────────────────
 export type FreestyleDifficulty = 'easy' | 'medium' | 'hard' | 'chaos'
 export type FreestyleDuration = 30 | 60 | 120
+export type FreestyleMode = 'topic' | 'rhyme'
 export type FreestyleCategory = 'everyday' | 'personal' | 'absurd' | 'mixed'
 
 /** One prompt word, shown from `bar` (0-based, timeline) until the next. */
 export interface FreestylePrompt {
+  target?: string
   word: string
   bar: number
 }
@@ -202,6 +216,7 @@ export interface FreestyleResult {
 }
 
 export interface FreestyleSession {
+  mode?: FreestyleMode
   category?: FreestyleCategory
   requestedDurationSec?: number
   promptEvery?: number | null

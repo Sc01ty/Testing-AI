@@ -265,6 +265,23 @@ class AudioEngine {
     set(this.clickBus.gain, perceptualGain(s.metronomeVolume) * 0.5)
   }
 
+  /** Quiet, cancellable anticipation through the same UI volume/mute bus. */
+  startAnalysis(): () => void {
+    const ctx=this.ctx
+    if(!ctx)return ()=>{}
+    const t=ctx.currentTime, gain=ctx.createGain()
+    gain.connect(this.uiBus)
+    gain.gain.setValueAtTime(0,t)
+    gain.gain.linearRampToValueAtTime(0.022,t+2)
+    gain.gain.linearRampToValueAtTime(0.035,t+10)
+    gain.gain.linearRampToValueAtTime(0,t+14)
+    const oscillators=[130.81,196,261.63].map(f=>{
+      const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,t)
+      o.frequency.exponentialRampToValueAtTime(f*1.5,t+12);o.connect(gain);o.start(t);o.stop(t+14.1);return o
+    })
+    return ()=>{gain.gain.cancelScheduledValues(ctx.currentTime);gain.gain.setTargetAtTime(0,ctx.currentTime,.04);setTimeout(()=>{oscillators.forEach(o=>{try{o.stop()}catch{/*ended*/}});gain.disconnect()},180)}
+  }
+
   private loadBuffer(url: string) {
     let p = this.buffers.get(url)
     if (!p) {

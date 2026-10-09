@@ -1,4 +1,4 @@
-import { baseVowel, isVowel, sound, stressOf, type WordSound } from './lexicon'
+import { baseVowel, isVowel, sound, alternatePron, stressOf, type WordSound } from './lexicon'
 
 /**
  * Rhyme and rhythm from SOUND, not spelling ("flats"/"stacks", "see"/"sea",
@@ -90,7 +90,9 @@ export function compareSounds(a: WordSound, b: WordSound): RhymeMatch {
       return codaClass(codaOf(a.phones)) === codaClass(codaOf(b.phones)) ? { kind: 'multi', score: 0.9, syllables: shared } : { kind: 'slant', score: 0.75, syllables: shared }
     }
     if (codaClass(codaOf(a.phones)) === codaClass(codaOf(b.phones))) return { kind: 'slant', score: 0.7, syllables: 1 }
-    return { kind: 'assonance', score: 0.5, syllables: 1 }
+    const ca = codaOf(a.phones).at(-1), cb = codaOf(b.phones).at(-1)
+    const near = [['D','Z'],['T','S'],['T','SH'],['S','SH'],['M','P'],['M','B'],['N','D'],['N','T']].some(pair => pair.includes(ca ?? '') && pair.includes(cb ?? ''))
+    return { kind: near ? 'slant' : 'assonance', score: near ? 0.68 : 0.5, syllables: 1 }
   }
   const ca = codaOf(a.phones).join(' ')
   if (ca && ca === codaOf(b.phones).join(' ')) return { kind: 'consonance', score: 0.25, syllables: 0 }
@@ -100,7 +102,12 @@ export function compareSounds(a: WordSound, b: WordSound): RhymeMatch {
 export function rhymeWords(a: string, b: string): RhymeMatch {
   const sa = sound(a)
   const sb = sound(b)
-  return sa && sb ? compareSounds(sa, sb) : NONE
+  if (!sa || !sb) return NONE
+  const variants = (s: WordSound) => {
+    const alt = alternatePron(s.word)
+    return alt ? [s, { ...s, phones: alt }] : [s]
+  }
+  return variants(sa).flatMap(x => variants(sb).map(y => compareSounds(x, y))).sort((x, y) => y.score - x.score)[0]
 }
 
 // ── lines: syllables, stress, rhyme across word boundaries ──────────────

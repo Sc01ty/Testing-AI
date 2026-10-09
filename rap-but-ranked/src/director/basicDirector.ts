@@ -65,20 +65,20 @@ type Template = { id: string; text: (h: Required<Pick<Hooks, never>> & { p: stri
 const BY_STAGE: Record<ArcStage, Template[]> = {
   open: [{ id: 'open', text: ({ topic }) => `Write 2 bars about ${topic}.` }],
   deepen: [
-    { id: 'deepen-detail', needs: 'detail', text: ({ d }) => `You mentioned “${d}”. Write 2 bars that zoom in on it — what does it look like up close?` },
-    { id: 'deepen-why', text: ({ topic }) => `Go deeper: write 2 bars about why ${topic} matters so much to you.` },
+    { id: 'deepen-detail', needs: 'detail', text: ({ d }) => `Write 2 bars showing us “${d}” up close.` },
+    { id: 'deepen-why', text: ({ topic }) => `Write 2 bars about why ${topic} matters to you.` },
     { id: 'deepen-where', text: ({ topic }) => `Write 2 bars about where you were the first time ${topic} really hit you.` },
   ],
   people: [
-    { id: 'people-for', needs: 'person', text: ({ p }) => `You mentioned ${p}. Write 2 bars about what you'd do for them if you made it.` },
+    { id: 'people-for', needs: 'person', text: ({ p }) => `Write 2 bars about what you'd do for ${p} if you made it.` },
     { id: 'people-see', needs: 'person', text: ({ p }) => `Write 2 bars about what ${p} sees when they look at you right now.` },
-    { id: 'people-who', text: ({ topic }) => `Who is all this for? Write 2 bars about the person who keeps you chasing ${topic}.` },
+    { id: 'people-who', text: ({ topic }) => `Write 2 bars about who keeps you chasing ${topic}.` },
   ],
   obstacle: [
     { id: 'obstacle-stop', text: () => `Now introduce something that could stop you getting there.` },
     { id: 'obstacle-doubt', text: () => `Write 2 bars about the people who doubted you — and what they said.` },
     { id: 'obstacle-cost', text: ({ theme }) => `Write 2 bars about what chasing ${theme} is costing you.` },
-    { id: 'obstacle-person', needs: 'person', text: ({ p }) => `What if you let ${p} down? Write 2 bars about that fear.` },
+    { id: 'obstacle-person', needs: 'person', text: ({ p }) => `Write 2 bars about your fear of letting ${p} down.` },
   ],
   turn: [
     { id: 'turn-moment', text: () => `Write 2 bars about the moment everything changed.` },
@@ -86,7 +86,7 @@ const BY_STAGE: Record<ArcStage, Template[]> = {
     { id: 'turn-now', text: () => `Show the glow-up: write 2 bars about who you are now compared to then.` },
   ],
   return: [
-    { id: 'return-start', text: ({ topic }) => `Bring the story back to where you started: ${topic} — but show how far you've come.` },
+    { id: 'return-start', text: ({ topic }) => `Return to ${topic}, showing how far you've come.` },
     { id: 'return-person', needs: 'person', text: ({ p, topic }) => `Final bars: bring it back to ${topic} and give ${p} the last word.` },
   ],
 }
@@ -94,7 +94,7 @@ const BY_STAGE: Record<ArcStage, Template[]> = {
 /** Theme-specific directions, used for 'deepen' when a clear theme shows up. */
 const BY_THEME: Record<string, Template[]> = {
   money: [
-    { id: 'money-buy', text: () => `You've got money on your mind. Write 2 bars about the first thing you'd buy — and why.` },
+    { id: 'money-buy', text: () => `Write 2 bars about the first thing you'd buy.` },
     { id: 'money-earn', text: () => `Write 2 bars about how you're actually going to earn it.` },
     { id: 'money-sacrifice', text: () => `Write 2 bars about what you'd sacrifice for the money.` },
   ],

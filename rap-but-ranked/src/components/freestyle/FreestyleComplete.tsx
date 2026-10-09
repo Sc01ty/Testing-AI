@@ -112,7 +112,7 @@ export function FreestyleComplete({
             <small>bar {p.bar + 1}</small>
             {p.word}
             {r.transcribed && <b>{p.hit ? '✓' : '✗'}</b>}
-            <small>{r.transcribed ? p.hit ? `“${p.evidence.join(' … ')}”` : 'Not detected' : 'Not evaluated'}</small>
+            <small>{r.transcribed ? p.hit ? `“${p.evidence.join(' … ')}”` : 'Not clearly used' : 'Not evaluated'}</small>
           </span>
         ))}
       </section>

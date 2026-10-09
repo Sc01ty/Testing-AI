@@ -85,7 +85,9 @@ export function computeProfile(sessions: Session[]): SkillProfile {
   const avg = writing.length ? writing.reduce((a, b) => a + b, 0) / writing.length : 0
   let level: 1 | 2 | 3 | 4 = rounds.length < MIN_ROUNDS ? 1 : avg >= 80 ? 4 : avg >= 68 ? 3 : avg >= 55 ? 2 : 1
   if (perRound >= 2 && level > 1) level = (level - 1) as 1 | 2 | 3
-  return { rounds: rounds.length, tendencies, weakest: weaknesses[0]?.skill ?? null, level, help: { perRound, byMode } }
+  // Repeated rhyme-first filler is more urgent than adding decorative rhyme density.
+  const priority = weaknesses.find(t => t.skill === 'meaning-first') ?? weaknesses[0]
+  return { rounds: rounds.length, tendencies, weakest: priority?.skill ?? null, level, help: { perRound, byMode } }
 }
 
 /** One line for prompts / logs: "multis (strength); often rhyme-first; overcrowded bars". */

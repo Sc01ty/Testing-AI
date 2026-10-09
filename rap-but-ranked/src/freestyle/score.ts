@@ -1,6 +1,9 @@
 import { rankForScore } from '../domain/rank'
 import type { CategoryScore, FreestylePrompt, FreestyleResult, TranscriptWord } from '../domain/types'
-import { STOPWORDS, rhymeStrength, stem, words as splitWords } from '../lyrics/text'
+import { STOPWORDS, stem, words as splitWords } from '../lyrics/text'
+import { rhymeWords } from '../coach/phonetics'
+import { rhymeEvidence, evidenceText } from '../coach/rhymeEvidence'
+import { sound } from '../coach/lexicon'
 import { analysePerformance } from '../scoring/performance'
 
 /**
@@ -25,7 +28,7 @@ export interface FreestyleInput {
   startTime: number
 }
 
-const WEIGHTS: Record<string, number> = { prompts: 0.25, continuity: 0.2, rhyme: 0.2, variety: 0.1, flow: 0.25 }
+const WEIGHTS: Record<string, number> = { prompts: 0.25, continuity: 0.2, rhyme: 0.2, variety: 0.1, timing: 0.125, flow: 0.125 }
 const FILLERS = new Set(['yeah', 'yo', 'uh', 'um', 'like', 'aye', 'ayy', 'huh', 'ah', 'oh', 'come', 'on'])
 const clamp = (v: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, v))
 const q = (w: string) => `“${w}”`
@@ -45,12 +48,13 @@ export function promptHits(prompts: FreestylePrompt[], words: TranscriptWord[], 
     const stems = new Set(target.map(stem))
     const inWindow = words.filter((w) => w.start >= from && w.start < to)
     const said = inWindow.map((w) => clean(w.text)).filter(Boolean)
-    const equivalents:Record<string,string[]>={money:['cash','currency','wealth'],regret:['regretted','regretting','remorse'],school:['school','classroom'],phone:['telephone','smartphone'],car:['automobile'],family:['family'],space:['space','cosmos']}
+    const equivalents:Record<string,string[]>={money:['cash','currency','wealth'],regret:['regretted','regretting','remorse'],school:['school','classroom'],phone:['telephone','smartphone'],car:['automobile'],family:['family','mum','mom','mother','dad','father','parents','brother','sister'],mum:['mom','mother','mama'],mom:['mum','mother','mama'],space:['space','cosmos']}
     // Every content word of a multiword target needs evidence. Broad theme matches aren't hits.
     const matched = target.every(w=>said.some(x=>stem(x)===stem(w) || (equivalents[w] ?? []).includes(x)))
     const bankContext=p.word==='money' && said.includes('bank') && said.some(w=>['double','savings','saving','balance','paid','deposit','account'].includes(w))
-    const hit=(target.length>0 && matched) || bankContext
-    const index=said.findIndex(w=>stems.has(stem(w)) || target.some(t=>(equivalents[t] ?? []).includes(w)) || (bankContext && w==='bank'))
+    const rhymeIndices = p.target ? said.map((w, i) => ({ w, i, m:rhymeWords(w, p.target!) })).filter(x => (x.w === p.target || x.m.score >= 0.65) && !STOPWORDS.has(x.w) && (sound(x.w)?.known ?? false)) : []
+    const hit=p.target ? new Set(rhymeIndices.map(x => x.w)).size >= 2 : (target.length>0 && matched) || bankContext
+    const index=p.target ? rhymeIndices[0]?.i ?? -1 : said.findIndex(w=>stems.has(stem(w)) || target.some(t=>(equivalents[t] ?? []).includes(w)) || (bankContext && w==='bank'))
     const excerpt=hit ? inWindow.slice(Math.max(0,index-5),Math.min(inWindow.length,index+7)).map(w=>w.text).join(' ') : ''
     return { word: p.word, bar: p.bar, hit, evidence: excerpt ? [excerpt] : [] }
   })
@@ -63,7 +67,7 @@ function scorePrompts(hits: ReturnType<typeof promptHits>): CategoryScore {
   if (got.length) reasons.push(`Used: ${got.slice(0, 3).map((h) => `${q(h.word)} (${h.evidence.map(q).join(', ')})`).join(' · ')}`)
   const missed = hits.filter((h) => !h.hit)
   if (missed.length) reasons.push(`Missed: ${missed.slice(0, 4).map((h) => q(h.word)).join(', ')}`)
-  return { category: 'prompts', label: 'Prompts', score: Math.round(n ? 12 + 88 * (got.length / n) : 0), basis: 'transcript', reasons }
+  return { category: 'prompts', label: 'Prompts hit', score: Math.round(n ? 12 + 88 * (got.length / n) : 0), basis: 'transcript', reasons }
 }
 
 // ── RHYME ────────────────────────────────────────────────────────────
@@ -79,32 +83,19 @@ export function barsOfWords(words: TranscriptWord[], bars: number, spBar: number
 }
 
 function scoreRhymeDensity(lines: string[][]): CategoryScore {
-  const spoken = lines.filter((l) => l.length)
-  const ends = spoken.map((l) => l[l.length - 1])
-  const pairs: string[] = []
-  let endRhymes = 0
-  for (let i = 1; i < ends.length; i++) {
-    for (const j of [i - 1, i - 2]) {
-      if (j < 0 || ends[i] === ends[j]) continue
-      if (rhymeStrength(ends[i], ends[j]).score >= 0.55) {
-        endRhymes++
-        if (pairs.length < 3) pairs.push(`${q(ends[j])}/${q(ends[i])}`)
-        break
-      }
-    }
-  }
-  let internal = 0
-  for (const l of spoken) {
-    const ws = l.filter((w) => w.length > 2 && !STOPWORDS.has(w))
-    for (let i = 0; i < ws.length; i++)
-      for (let j = i + 1; j < ws.length; j++) if (ws[i] !== ws[j] && rhymeStrength(ws[i], ws[j]).score >= 0.7) internal++
-  }
-  const per4 = spoken.length ? ((endRhymes + internal * 0.5) / spoken.length) * 4 : 0
-  const reasons: string[] = []
-  if (pairs.length) reasons.push(`Rhymes landed: ${pairs.join(', ')}`)
-  reasons.push(`${endRhymes} end rhyme${endRhymes === 1 ? '' : 's'} across ${spoken.length} bar${spoken.length === 1 ? '' : 's'}${internal ? `, ${internal} internal` : ''}`)
-  if (!endRhymes) reasons.push("Bar endings didn't rhyme with each other")
-  return { category: 'rhyme', label: 'Rhyme', score: Math.round(clamp(18 + per4 * 22)), basis: 'transcript', reasons }
+  const spoken = lines.filter(l => l.length).map(l => l.join(' '))
+  const e = rhymeEvidence(spoken)
+  const landed = e.ends.filter(x => x.strength >= 0.65)
+  const endShare = landed.reduce((sum, x) => sum + x.strength, 0) / Math.max(1, e.ends.length)
+  const density = e.internal.length / Math.max(1, spoken.length)
+  const score = Math.round(clamp(18 + endShare * 58 + Math.min(18, density * 12) + Math.min(6, e.families.length * 3)))
+  const confidence = [...e.ends, ...e.internal].some(x => x.confidence === 'low') ? 'low' : 'medium'
+  const reasons = [...landed.slice(0, 3).map(evidenceText), ...e.internal.slice(0, 2).map(x => `Internal: ${evidenceText(x)}`)]
+  if (e.families.length) reasons.push(`Rhyme family: ${e.families[0].words.join(' / ')}`)
+  reasons.push(`${landed.length}/${e.ends.length} neighbouring endings match; ${e.internal.length} distinct internal pairs.`)
+  reasons.push(`Confidence: ${confidence.toUpperCase()} — transcript and written pronunciation may miss your delivery.`)
+  return { category: 'rhyme', label: 'Rhyme', score, basis: 'transcript', confidence, reasons }
+
 }
 
 // ── VARIETY ──────────────────────────────────────────────────────────
@@ -122,7 +113,7 @@ function scoreVariety(words: TranscriptWord[]): CategoryScore {
   if (fillerShare > 0.12) reasons.push(`Lots of filler (${Math.round(fillerShare * 100)}% “yeah / uh / like”) — fine for breathing, but it's not bars`)
   if (!reasons.length) reasons.push(`${counts.size} different words, hardly any repeats`)
   const score = clamp(30 + unique * 75 - repeats.length * 5 - Math.max(0, fillerShare - 0.08) * 120)
-  return { category: 'variety', label: 'Variety', score: Math.round(score), basis: 'transcript', reasons }
+  return { category: 'variety', label: 'Repetition', score: Math.round(score), basis: 'transcript', reasons }
 }
 
 // ── CONTINUITY (audio) ───────────────────────────────────────────────
@@ -199,8 +190,8 @@ function scoreFlowFreestyle(input: FreestyleInput, lines: string[][] | null): Ca
       reasons.push(cv < 0.35 ? `Steady pace: about ${Math.round(mean)} words a bar` : `Pace jumps around (${Math.min(...counts)}–${Math.max(...counts)} words a bar)`)
     }
   }
-  const score = clamp(timing * 70 + pace * 30)
-  return { category: 'flow', label: 'Flow / timing', score: Math.round(score), basis: 'audio', reasons }
+  const score = clamp(pace * 60 + a.coverage * 40)
+  return { category: 'flow', label: 'Flow', score: Math.round(score), basis: lines ? 'transcript' : 'audio', confidence:'low', reasons: [...reasons.slice(1), `Detected vocal activity covers ${Math.round(a.coverage*100)}% of the take; pace estimate, not a judgement of charisma.`] }
 }
 
 // ── all together ─────────────────────────────────────────────────────
@@ -214,8 +205,12 @@ export function scoreFreestyle(input: FreestyleInput): FreestyleResult {
   if (input.words) categories.push(scorePrompts(hits))
   categories.push(continuity)
   if (input.words && lines) categories.push(scoreRhymeDensity(lines), scoreVariety(input.words))
+  const performance = analysePerformance({ samples:input.samples, sampleRate:input.sampleRate, beatTimeSec:input.startTime, sectionStart:0, sectionEnd:input.bars * spBar, secondsPerBeat:input.secondsPerBeat, lyricSyllables:0 })
+  categories.push({category:'timing',label:'Timing',score:performance.meanDeviation === null ? 0 : Math.round(clamp((0.25-performance.meanDeviation)/0.15,0,1)*100),basis:'audio',confidence:'low',reasons:[performance.meanDeviation === null ? 'Not enough clear onsets to judge timing.' : `Detected onsets average ${Math.round(performance.meanDeviation*input.secondsPerBeat/4*1000)} ms from the beat grid.`, 'Approximate onset timing; syncopation and expressive delivery can differ.']})
   categories.push(scoreFlowFreestyle(input, lines))
 
+  const order = ['prompts','rhyme','continuity','variety','timing','flow']
+  categories.sort((a,b)=>order.indexOf(a.category)-order.indexOf(b.category))
   if (vb.tooQuiet) for (const c of categories) c.score = Math.min(c.score, 5)
   const wsum = categories.reduce((s, c) => s + (WEIGHTS[c.category] ?? 0), 0)
   const score = Math.round(categories.reduce((s, c) => s + c.score * (WEIGHTS[c.category] ?? 0), 0) / Math.max(1e-6, wsum))

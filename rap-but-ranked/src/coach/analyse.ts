@@ -1,7 +1,8 @@
 import { STOPWORDS, contentWords, lastWord, stem, words } from '../lyrics/text'
 import { peopleIn, themesIn } from '../lyrics/themes'
+import { rhymeEvidence } from './rhymeEvidence'
 import { isVowel, sound } from './lexicon'
-import { lineEndMatch, lineSyllables, rhymePocket, rhymeWords, stressString } from './phonetics'
+import { lineSyllables, rhymePocket, rhymeWords, stressString, type SoundRhymeKind } from './phonetics'
 import { SENSES, homophonesOf, linkBetween, sensesOf, worldLabel, worldsOf } from './semantics'
 import type { BarAnalysis, ChainLink, Constraint, ConstraintResult, FillerFlag, NaturalnessFlag, WordplayCandidate } from './types'
 
@@ -63,20 +64,6 @@ export function cadenceFromSketch(line: string) {
 function lineInfo(text: string) {
   const syl = lineSyllables(text)
   return { text, syllables: syl.length, stress: stressString(syl), endWord: lastWord(text), pocket: rhymePocket(text)?.vowel ?? null }
-}
-
-function internalPairs(lines: [string, string], end: [string, string]) {
-  const out: { a: string; b: string; kind: ReturnType<typeof rhymeWords>['kind'] }[] = []
-  const all = [...words(lines[0]), ...words(lines[1])].filter((w) => w.length > 2 && !STOPWORDS.has(w))
-  for (let i = 0; i < all.length; i++)
-    for (let j = i + 1; j < all.length; j++) {
-      const a = all[i]
-      const b = all[j]
-      if ((a === end[0] && b === end[1]) || (a === end[1] && b === end[0])) continue
-      const m = rhymeWords(a, b)
-      if (m.score >= 0.7) out.push({ a, b, kind: m.kind })
-    }
-  return out
 }
 
 /** Does the end rhyme only work if a normally-unstressed syllable is stressed? ("DOC-TOR" / "car") */
@@ -280,8 +267,10 @@ export function analyseBars(input: AnalyseInput): BarAnalysis {
   const info = [lineInfo(lines[0]), lineInfo(lines[1])] as [ReturnType<typeof lineInfo>, ReturnType<typeof lineInfo>]
   const endWords: [string, string] = [info[0].endWord, info[1].endWord]
   const end = rhymeWords(endWords[0], endWords[1])
-  const multi = lineEndMatch(lines[0], lines[1]).syllables
-  const internal = internalPairs(lines, endWords)
+  const evidence = rhymeEvidence(lines)
+  const landing = evidence.ends[0]
+  const multi = landing.syllables
+  const internal = evidence.internal.map(e=>({a:e.a,b:e.b,kind:e.kind as SoundRhymeKind}))
   const prevPocket = input.previous.length ? rhymePocket(input.previous[input.previous.length - 1][1])?.vowel : null
 
   // cadence vs the bar length: ~3–5 syllables a second is comfortable rapping
@@ -318,10 +307,12 @@ export function analyseBars(input: AnalyseInput): BarAnalysis {
     ],
     cadenceSketch: sketch,
     rhyme: {
-      end: { kind: end.kind, score: end.score, words: endWords },
+      end: { kind: (landing.kind === 'multisyllabic' ? 'multi' : landing.kind === 'partial multisyllabic' ? 'slant' : landing.kind === 'repeated sound' ? 'identical' : landing.kind) as SoundRhymeKind, score: landing.strength, words: [landing.a, landing.b] },
+      evidence: [...evidence.ends, ...evidence.internal],
+      confidence: [...evidence.ends, ...evidence.internal].some(e => e.confidence === 'low') ? 'low' : 'medium',
       lineMulti: multi,
       internal,
-      density: internal.length / 2,
+      density: evidence.internal.length / Math.max(1, cws.length),
       continuesPocket: !!prevPocket && info[1].pocket === prevPocket,
       stretched: naturalness.find((n) => n.kind === 'stretched-rhyme')?.text ?? null,
     },

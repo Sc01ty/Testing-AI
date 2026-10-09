@@ -1,5 +1,7 @@
 import type { Session } from '../domain/types'
-import { STOPWORDS, contentWords, lastWord, lineSyllables, rhymeStrength, stem, words } from '../lyrics/text'
+import { STOPWORDS, contentWords, lastWord, lineSyllables, stem, words } from '../lyrics/text'
+import { rhymeWords as rhymeStrength } from '../coach/phonetics'
+import { endingEvidence } from '../coach/rhymeEvidence'
 import { peopleIn, themeLabel, themesIn, topicWords } from '../lyrics/themes'
 import { CLICHES, LAZY_PAIRS, concreteness } from '../scoring/lyricScore'
 import { finalResult } from '../scoring/round'
@@ -78,7 +80,7 @@ export function analyseTrack(s: Session): Report {
   const weaknesses: Insight[] = []
 
   // ── rhyme: end-only vs internal ───────────────────────────────────
-  const endKinds = rounds.map((r) => rhymeStrength(lastWord(r.lyrics[0]), lastWord(r.lyrics[1])))
+  const endKinds = rounds.map((r) => { const e = endingEvidence(...r.lyrics); return { score: e.strength, kind: e.syllables >= 2 ? 'multi' : e.kind } })
   const endHit = endKinds.filter((k) => k.score >= 0.55).length
   const multi = endKinds.filter((k) => k.kind === 'multi').length
   const internal = rounds.map((r) => internalPairs(r.lyrics[0]).length + internalPairs(r.lyrics[1]).length)
@@ -91,6 +93,7 @@ export function analyseTrack(s: Session): Report {
     const r = rounds[endKinds.findIndex((k) => k.score < 0.55)]
     weaknesses.push({ id: 'no-end-rhyme', title: "Half your bars don't land", detail: `Only ${endHit} of ${rounds.length} rounds end on a rhyme. Pick the landing word for bar two before you write bar one.`, evidence: r ? `${q(lastWord(r.lyrics[0]))} / ${q(lastWord(r.lyrics[1]))}` : undefined, weight: 0.9 - endHit / rounds.length })
   }
+  if (endHit >= Math.ceil(rounds.length * .75) && multi === 0) weaknesses.push({id:'single-syllable',title:'Strong landings, mostly one syllable',detail:`Your ${endHit} rhyme landings work, but none clearly match two syllables. Try linking the last two sounds across a phrase.`,weight:.6})
   if (withInternal >= Math.ceil(rounds.length / 2) && bestInternal) {
     strengths.push({ id: 'internal', title: 'You rhyme inside the bar, not just at the end', detail: `Internal rhymes in ${withInternal} of ${rounds.length} rounds — that's what makes bars sound dense.`, evidence: `${q(bestInternal[0])} / ${q(bestInternal[1])}`, weight: 0.75 })
   } else if (endHit >= rounds.length / 2) {
@@ -200,6 +203,7 @@ export function analyseTrack(s: Session): Report {
     stats: [
       { label: 'Final', value: `${final.rank} · ${final.score}` },
       { label: 'Rhymes landed', value: `${endHit}/${rounds.length}` },
+      { label: 'Multisyllabic landings', value: `${multi}/${rounds.length}` },
       { label: 'Internal rhymes', value: `${withInternal}/${rounds.length} rounds` },
       { label: 'Syllables / bar', value: `${Math.round(mean)} (aim ${target - 2}–${target + 4})` },
       { label: 'Themes', value: [...themesIn(all).keys()].slice(0, 3).map(themeLabel).join(', ') || '—' },

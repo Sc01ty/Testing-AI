@@ -52,6 +52,7 @@ export type Constraint =
   | { kind: 'sense-shift' }
 
 export interface ChallengeSpec {
+  trainingHint?: string
   type: ChallengeType
   skill: SkillId
   /** 1 early … 4 advanced. */
@@ -75,6 +76,8 @@ export interface LineInfo {
 }
 
 export interface RhymeInfo {
+  evidence?: import('./rhymeEvidence').RhymeEvidence[]
+  confidence?: 'medium' | 'low'
   end: { kind: SoundRhymeKind; score: number; words: [string, string] }
   /** Syllables matched across the line endings, across word boundaries. */
   lineMulti: number

@@ -1,7 +1,7 @@
 import { audio } from '../audio/AudioEngine'
 import { beatPlayer } from '../audio/BeatPlayer'
 import { renderMix } from '../audio/mix'
-import type { BeatMeta, FreestyleCategory, FreestyleDifficulty, FreestyleSession } from '../domain/types'
+import type { BeatMeta, FreestyleCategory, FreestyleDifficulty, FreestyleMode, FreestyleSession } from '../domain/types'
 import { saveWav } from '../play/fullTrack'
 import { arrangedClips } from '../play/vocals'
 import { getBeatAudio } from '../storage'
@@ -29,7 +29,7 @@ export function freestyleShape(beat: Pick<BeatMeta, 'bpm' | 'introOffset' | 'dur
   return { bars, loop: { start: beat.introOffset, end: beat.introOffset + loopBars * spBar }, loopBars }
 }
 
-export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDifficulty; durationSec: number; every: number | null; category?: FreestyleCategory }): FreestyleSession | null {
+export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDifficulty; durationSec: number; every: number | null; category?: FreestyleCategory; mode?: FreestyleMode }): FreestyleSession | null {
   const shape = freestyleShape(input.beat, input.durationSec)
   if (!shape) return null
   const now = Date.now()
@@ -37,6 +37,7 @@ export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDiffi
   return {
     id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `f_${now}`,
     kind: 'freestyle',
+    mode: input.mode ?? 'topic',
     name: `${DIFFICULTY_LABEL[input.difficulty]} freestyle · ${date}`,
     beatId: input.beat.id,
     beatName: input.beat.name,
@@ -47,7 +48,7 @@ export function newFreestyle(input: { beat: BeatMeta; difficulty: FreestyleDiffi
     promptEvery: input.every,
     bars: shape.bars,
     loop: shape.loop,
-    prompts: planPrompts(input.difficulty, shape.bars, now % 100000, input.every, input.category ?? 'mixed'),
+    prompts: planPrompts(input.difficulty, shape.bars, now % 100000, input.every, input.category ?? 'mixed', input.mode ?? 'topic'),
     take: null,
     transcript: null,
     result: null,

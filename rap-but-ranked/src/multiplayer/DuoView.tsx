@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { AdlibPanel } from '../components/play/AdlibPanel'
+import { ensureLexicon } from '../coach/lexicon'
 import { audio } from '../audio/AudioEngine'
 import { trackPlayer, useTrackPlayer } from '../audio/trackPlayer'
 import { TakeRecorder } from '../audio/recordTake'
@@ -72,6 +74,7 @@ export function DuoView({ initial, onLeave, networkReadOnly=false }: { initial?:
     setBusy(true)
     setError(null)
     try {
+      await ensureLexicon()
       await action()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -399,6 +402,9 @@ export function DuoView({ initial, onLeave, networkReadOnly=false }: { initial?:
               Perform whole track again
             </Button>}
           </div>
+          <AdlibPanel sessionId={s.id} beatId={s.beatId} bpm={s.beatGrid.bpm} beatsPerBar={s.beatGrid.beatsPerBar} layers={s.adlibs} multiplayer={s.mode==='online'}
+            makeBacking={async()=>{audio.unlock();return duoMix({...s,adlibs:[]},audio.context!)}}
+            onKeep={async(adlibs)=>{trackPlayer.stop();await persist({...s,adlibs,updatedAt:Date.now()})}}/>
           <div className="duo-summaries">
             {s.players.map((name, p) => {
               const own = s.turns.filter((t) => t.player === p && t.result)
@@ -444,6 +450,7 @@ export function DuoView({ initial, onLeave, networkReadOnly=false }: { initial?:
                 ))}
               </ol>
               <p>{t.result?.feedback.join(' ')}</p>
+              {t.result?.categories.filter(c=>c.category==='rhyme').map(c=><details key={c.category}><summary>Rhyme {c.score} · confidence {c.confidence ?? 'low'}</summary>{c.reasons.map(r=><p key={r}>{r}</p>)}</details>)}
               {!networkReadOnly && <Button disabled={busy} onClick={() => void safe(() => retake(t))}>
                 Retake slot {t.index + 1}
               </Button>}

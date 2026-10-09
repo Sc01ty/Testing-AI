@@ -21,6 +21,7 @@ export type UiSoundId =
   | 'impactBig'
   | 'save'
   | 'remove'
+  | 'scoreReveal'
 
 export type SoundSource =
   | { kind: 'synth'; recipe: SynthRecipe; gain?: number }
@@ -33,6 +34,7 @@ export interface SoundDef {
 }
 
 export const UI_SOUNDS: Record<UiSoundId, SoundDef> = {
+  scoreReveal: {source:{kind:'file',url:'audio/ui/score-reveal.wav',gain:0.35},minIntervalMs:500},
   hover: { source: { kind: 'synth', recipe: synth.hover }, minIntervalMs: 45 },
   move: { source: { kind: 'synth', recipe: synth.move }, minIntervalMs: 30 },
   confirm: { source: { kind: 'synth', recipe: synth.confirm }, minIntervalMs: 80 },

@@ -46,6 +46,14 @@ function lookup(w: string): [string[], number] | null {
 function fromLexicon(w: string): [string[], number] | null {
   const direct = lookup(w)
   if (direct) return direct
+  // Common abbreviation absent from the reduced dictionary.
+  if (w === 'max') return [['M', 'AE1', 'K', 'S'], 2]
+  // Closed compounds retain the component sounds (backseat / back seat).
+  const compounds = new Set(['backseat','backstage','backpack','bedroom','headphones','schoolboy','schoolgirl','freestyle','daylight','nighttime','moonlight'])
+  for (let i = 3; compounds.has(w) && i <= w.length - 3; i++) {
+    const left = lookup(w.slice(0, i)), right = lookup(w.slice(i))
+    if (left && right) return [[...left[0], ...right[0]], Math.max(left[1], right[1])]
+  }
   // g-dropping: "grindin" / "grindin'"
   const g = w.replace(/in'?$/, 'ing')
   if (g !== w) {

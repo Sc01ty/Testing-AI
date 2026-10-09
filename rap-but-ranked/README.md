@@ -2,6 +2,20 @@
 
 **Write 2 bars. Rap them. Get ranked. Build the song.**
 
+## v0.9 — the real-playtest improvement pass
+
+The existing Play loop, black/purple identity, online rooms and nine included beats remain. Rhyme feedback now exposes sound-pair evidence, phrase multis, slants, internal pairs and pronunciation confidence. Play, Freestyle and Improve use the same phonetic engine. Alternate dictionary pronunciations and common closed compounds are handled; filler endings no longer hide the landing. Repeated words/homophones do not earn new rhyme credit. Scores describe likely **written pronunciation**, not what an accent or performance actually sounded like. Unknown slang/names lower confidence; Freestyle also depends on the transcript and bar alignment.
+
+Story challenges stay one short task. Optional skill coaching appears behind a separate hint instead of lengthening the prompt or enforcing hidden constraints. The local director sees the full lyric/challenge history and people/story context; validated short output falls back to the contextual basic director. Duo prompts retain speaker identity.
+
+Freestyle has **Topic Run** and **Rhyme Run**. Topic Run uses the existing categories. Rhyme Run shows sound families and needs at least two different recognized words in each window; repetitions alone cannot hit a target. Difficulty, duration, beat, next prompt, remaining time, mic/metronome and progression stay visible. Prompt hits quote transcript excerpts after recording. Results separate Prompts Hit, Rhyme, Continuity, Repetition, Timing and Flow; unavailable word categories are left unjudged. Retry preserves settings with a fresh prompt plan. Story Run is intentionally deferred until reliable story assessment exists.
+
+Completed singleplayer and duo tracks offer one optional continuous **ad-lib layer**: record over accepted beat/vocals, preview, keep, retake or mute. It has its own waveform and is mixed at a lower backing level into playback/WAV export. Cancelling a retake preserves the kept layer. Saved reloads it without changing the lead vocals or old records. **Online duo ad-libs are device-local**; both players retain the shared lead track, but extra layers are not uploaded to the room. Clearing browser storage removes local recordings.
+
+Judging adds a quiet, cancellable rising chord texture, the user's Game Audio Vault `Menu_Confirm.wav` for score reveal (`public/audio/ui/score-reveal.wav`), and the existing rank impact. The reveal honors UI/master volume and mute. No dedicated orchestral riser was present in the inspected vault, so the rising texture uses Web Audio rather than an unrelated music excerpt.
+
+Verification: `npm test -- --run` includes messy slants, slang, fillers, phrase multis, repeated sounds, guessed pronunciations and weak bars. `e2e/quality.spec.ts` captures a real browser microphone stream over seeded completed single/duo lead tracks and checks keep/mute/export/reload/cancel. Existing audio, freestyle and isolated-client room tests cover continuity, ASR, retry and multiplayer handoffs. Human ears remain the check for accent-sensitive fairness and sound balance.
+
 ## v0.8 — online rooms and included beats
 
 Multiplayer now means **two separate devices**: enter your name, create a lobby, share its seven-character code and have your mate join. The host chooses the shared beat/topic/length and Standard or Quick Trade. Each player locks only their own sections; both can see the story so far. Enable voice, ready up on both devices, then the host starts one shared count-in. Keep the tab visible and wear headphones.
@@ -134,7 +148,7 @@ Details are in [`docs/COACH.md`](docs/COACH.md).
 
 ## Audio assets
 - `public/audio/music/menu-theme.mp3` is the supplied *RAP_BUT_RANKED* theme. It loops quietly on the menu and is muffled, never restarted, behind other pages. It preloads in the background once the page is up and starts on the first interaction, or immediately if the browser allows autoplay.
-- UI sounds are currently tiny procedural Web Audio sounds (`src/audio/synthRecipes.ts`). When the Game Audio Vault is linked, drop files in `public/audio/ui/` and point the entries in `src/audio/sounds.ts` at them. Components won't need to change.
+- Most UI sounds are tiny procedural Web Audio sounds (`src/audio/synthRecipes.ts`). When the Game Audio Vault is linked, drop files in `public/audio/ui/` and point the entries in `src/audio/sounds.ts` at them. Components won't need to change.
 
 ## Fonts
 [Unbounded](https://fonts.google.com/specimen/Unbounded) is the display face and [Manrope](https://fonts.google.com/specimen/Manrope) the UI/body face. Both are SIL Open Font License and self-hosted through `@fontsource-variable`, so there are no third-party font requests.

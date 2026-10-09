@@ -5,6 +5,7 @@ import { encodeWav } from '../audio/wav'
 import type { SavedBeat, Session } from '../domain/types'
 import { getBeatAudio } from '../storage'
 import { sectionFor } from './sessionLogic'
+import { adlibClips } from './adlibs'
 import { arrangedClips } from './vocals'
 
 /**
@@ -20,7 +21,7 @@ export async function buildFullTrack(session: Session, beat: Pick<SavedBeat, 'id
   const last = sectionFor(beat, Math.max(0, session.rounds.length - 1))
   const from = Math.max(0, first.start - first.grid.secondsPerBar)
   const to = Math.min(beat.durationSec, last.end + last.grid.secondsPerBar)
-  return { beatBuffer, clips, from, to }
+  return { beatBuffer, clips: [...clips,...await adlibClips(session.adlibs,ctx)], from, to }
 }
 
 /** Which round's bars are playing at beat-time t (for lyric highlighting). */

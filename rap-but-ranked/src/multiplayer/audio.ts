@@ -4,6 +4,7 @@ import { renderMix, type VocalClip } from '../audio/mix'
 import { envelope, levelGain } from '../audio/arrange'
 import { getBeatAudio } from '../storage'
 import { takeBuffer, takeSamples } from '../play/takeAudio'
+import { adlibClips } from '../play/adlibs'
 import { saveWav } from '../play/fullTrack'
 import type { DuoSession } from './session'
 
@@ -47,7 +48,7 @@ export async function duoMix(s: DuoSession, ctx: BaseAudioContext) {
       await add(t.take.id, t.take.beatTimeSec, [{ start: t.start + t.vocalOffset, end: t.end }])
   return {
     beatBuffer,
-    clips,
+    clips:[...clips,...await adlibClips(s.adlibs,ctx)],
     from: Math.max(0, s.turns[0].start - 60 / s.beatGrid.bpm),
     to: s.turns.at(-1)!.end + 0.35,
   }
