@@ -64,15 +64,18 @@ function drawShape(g: CanvasRenderingContext2D, v: VocalShape, toX: (t: number) 
 }
 
 /** Studio: all `bars` of the song as slots; finished takes drawn in, the current two bars outlined. */
-export function SongStrip({ grid, bars, vocals, current }: { grid: BeatGrid; bars: number; vocals: VocalShape[]; current: number | null }) {
+export function SongStrip({ grid, bars, vocals, current, sections }: { grid: BeatGrid; bars: number; vocals: VocalShape[]; current: number | null; sections?: { start: number; end: number }[] }) {
   const bar = secPerBar(grid)
   const ref = useCanvas(
     34,
     (g, w, h) => {
-      const toX = (t: number) => ((t - grid.introOffset) / (bars * bar)) * w
-      const slotW = w / (bars / 2)
-      for (let s = 0; s < bars / 2; s++) {
-        const x = s * slotW
+      // round slots: where each round's START/END really sit (moved sections stretch the song)
+      const slots = sections ?? Array.from({ length: bars / 2 }, (_, i) => ({ start: grid.introOffset + i * 2 * bar, end: grid.introOffset + (i + 1) * 2 * bar }))
+      const span = Math.max(bars * bar, (slots.at(-1)?.end ?? 0) - grid.introOffset)
+      const toX = (t: number) => ((t - grid.introOffset) / span) * w
+      for (let s = 0; s < slots.length; s++) {
+        const x = toX(slots[s].start)
+        const slotW = toX(slots[s].end) - x
         g.fillStyle = s === current ? 'rgba(154, 107, 255, 0.16)' : 'rgba(200, 180, 255, 0.05)'
         g.fillRect(x + 1, 2, slotW - 2, h - 4)
         if (s === current) {
@@ -87,7 +90,7 @@ export function SongStrip({ grid, bars, vocals, current }: { grid: BeatGrid; bar
       grad.addColorStop(1, '#9a6bff')
       for (const v of vocals) drawShape(g, v, toX, h / 2, h - 8, max, grad)
     },
-    [grid, bars, vocals, current],
+    [grid, bars, vocals, current, sections],
   )
   const done = vocals.length * 2
   return <canvas ref={ref} className="song-strip" style={{ height: 34, width: '100%', display: 'block' }} role="img" aria-label={`Song so far: ${done} of ${bars} bars recorded`} />

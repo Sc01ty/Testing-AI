@@ -1,4 +1,5 @@
 import type { DuoSession } from './session'
+export type TurnActivity = 'writing' | 'previewing' | 'recording' | 'reviewing' | 'submitting'
 export interface RoomAccess {
   code: string
   token: string
@@ -12,8 +13,8 @@ export interface RoomState {
   unchanged?: boolean
   members: ({ name: string; ready: boolean; online: boolean } | null)[]
   session: DuoSession | null
-  startAt: number | null
-  run: number
+  /** What each player is doing right now (online turns). */
+  activity?: ({ state: TurnActivity; at: number } | null)[]
   signals: Record<string, unknown>[]
   now: number
 }

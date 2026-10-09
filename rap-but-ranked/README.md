@@ -2,6 +2,20 @@
 
 **Write 2 bars. Rap them. Get ranked. Build the song.**
 
+## v0.10 — turn-by-turn online rooms and START / END sections
+
+**Online multiplayer is now the singleplayer loop, taking turns.** Whoever's section it is gets the normal studio: challenge, one line per bar, beat waveform, preview/loop/metronome, record, play back, retake, **Submit turn**. The other player sees a get-ready screen: **“SCOTTY IS RAPPING”** (or writing / checking the take / locking it in, live from their mate's studio), *GET READY FOR YOUR TURN*, their mate's challenge and a small writing tip. On submit the take is scored on the submitter's device, uploaded, a quick score card appears on both screens and the studio switches to the other player, whose count-in plays the end of their mate's take. When every section is in, both browsers save the combined track. Afterwards each player can **Redo my section** without touching their mate's; the host can start a **New track in this room**. Voice chat is optional now.
+
+**START / END handles** sit on the beat lane in singleplayer and online. Drag a handle to trim, drag the middle to slide, or use ← → (a beat) and Shift+← → (a bar). Everything snaps to beats. The window is **locked at its maximum length**: dragging END further does nothing (the box flashes). It can't leave its zone either:
+- *Singleplayer:* each round may be placed up to four bars after where the previous round ended. It records at most two bars, and the zone never grows so far that the remaining rounds would run off the beat. Rounds you don't move sit exactly where they always did, so old sessions are unchanged.
+- *Online:* a section stays inside its own bars (4 Standard, 2 Quick Trade, plus the early beat for overlaps), so the next player's section is never touched. The server rejects anything outside.
+
+If you move START/END after recording, Submit is disabled until you record again, because the take no longer fits. The mix, WAV export and performance scoring use the chosen window.
+
+Room API changes (`public/api/rooms.php`): `submit` (one section: lyrics, START/END, WAV, score, next challenge; turn order and ownership enforced; redo replaces the old file) and `activity` (what the active player is doing, without bumping the room version) replace `lock` / `ready` / `start` / `reset` / `upload`. **Deploy the PHP file with the app**: an old client won't work against the new API, and vice versa. Each new track in a room gets its own id, so finishing a second track no longer overwrites the first in Saved.
+
+Tests: `src/play/sectionWindow.test.ts` (locking, trimming, sliding, zones, old-session placement), `scripts/rooms.test.mjs` (order, ownership, bounds, redo, activity) and `e2e/revision.spec.ts` (two isolated browsers take real turns in Standard, Quick Trade and overlap rooms with a fake mic, check the waiting screen and live “IS RAPPING”, try to drag END past the lock, then redo a section). `e2e/play.spec.ts` checks the singleplayer lock and trim.
+
 ## v0.9 — the real-playtest improvement pass
 
 The existing Play loop, black/purple identity, online rooms and nine included beats remain. Rhyme feedback now exposes sound-pair evidence, phrase multis, slants, internal pairs and pronunciation confidence. Play, Freestyle and Improve use the same phonetic engine. Alternate dictionary pronunciations and common closed compounds are handled; filler endings no longer hide the landing. Repeated words/homophones do not earn new rhyme credit. Scores describe likely **written pronunciation**, not what an accent or performance actually sounded like. Unknown slang/names lower confidence; Freestyle also depends on the transcript and bar alignment.

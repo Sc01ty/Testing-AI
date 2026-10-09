@@ -4,7 +4,7 @@ import { renderMix } from '../audio/mix'
 import { encodeWav } from '../audio/wav'
 import type { SavedBeat, Session } from '../domain/types'
 import { getBeatAudio } from '../storage'
-import { sectionFor } from './sessionLogic'
+import { roundSections } from './sessionLogic'
 import { adlibClips } from './adlibs'
 import { arrangedClips } from './vocals'
 
@@ -17,8 +17,9 @@ import { arrangedClips } from './vocals'
 export async function buildFullTrack(session: Session, beat: Pick<SavedBeat, 'id' | 'bpm' | 'introOffset' | 'durationSec' | 'beatsPerBar'>, ctx: BaseAudioContext, opts: { withBeat?: boolean } = {}) {
   const beatBuffer = opts.withBeat === false ? null : await beatPlayer.loadBuffer({ id: beat.id, getBlob: () => getBeatAudio(beat.id) }).catch(() => null)
   const clips = await arrangedClips(ctx, session.rounds.filter((r) => r.take && r.result).map((r) => r.take!))
-  const first = sectionFor(beat, 0)
-  const last = sectionFor(beat, Math.max(0, session.rounds.length - 1))
+  const sections = roundSections(session, beat)
+  const first = sections[0]
+  const last = sections[sections.length - 1]
   const from = Math.max(0, first.start - first.grid.secondsPerBar)
   const to = Math.min(beat.durationSec, last.end + last.grid.secondsPerBar)
   return { beatBuffer, clips: [...clips,...await adlibClips(session.adlibs,ctx)], from, to }
@@ -26,8 +27,9 @@ export async function buildFullTrack(session: Session, beat: Pick<SavedBeat, 'id
 
 /** Which round's bars are playing at beat-time t (for lyric highlighting). */
 export function roundAt(session: Session, beat: Pick<SavedBeat, 'bpm' | 'introOffset' | 'durationSec' | 'beatsPerBar'>, t: number): number | null {
+  const sections = roundSections(session, beat)
   for (const r of session.rounds) {
-    const s = sectionFor(beat, r.index)
+    const s = sections[r.index]
     if (t >= s.start && t < s.end) return r.index
   }
   return null

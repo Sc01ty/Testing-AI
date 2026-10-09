@@ -51,48 +51,42 @@ for (const [style, boundary] of [
     await host.getByRole('radio', { name: `${trackBars} bars`, exact: true }).click()
     await host.getByRole('radio', { name: style, exact: true }).click()
     await host.getByRole('radio', { name: boundary, exact: true }).click()
-    await host.getByRole('button', { name: 'Prepare shared track' }).click()
+    await host.getByRole('button', { name: 'Start shared track' }).click()
     await expect(guest.getByText('Remote Trade', { exact: true })).toBeVisible()
-    for (const p of [host, guest])
-      await p.getByRole('button', { name: 'Enable voice', exact: true }).click()
-    await expect(host.getByText('VOICE · connected', { exact: true })).toBeVisible({
-      timeout: 30000,
-    })
-    await expect(guest.getByText('VOICE · connected', { exact: true })).toBeVisible({
-      timeout: 30000,
-    })
     const turns = trackBars / (style.startsWith('Standard') ? 4 : 2),
       bars = style.startsWith('Standard') ? 4 : 2
+    const lines = ['I bought my mum a house', 'We finally escaped the rain', 'Paid the bills before the dawn', 'Now we never fear the pain']
     for (let t = 0; t < turns; t++) {
       const p = t % 2 === 0 ? host : guest,
-        other = t % 2 === 0 ? guest : host
-      await expect(other.getByRole('button', { name: 'Lock my section' })).toHaveCount(0)
-      for (let i = 0; i < bars; i++)
-        await p
-          .getByLabel(`Bar ${i + 1}`, { exact: true })
-          .fill(
-            [
-              'I bought my mum a house',
-              'We finally escaped the rain',
-              'Paid the bills before the dawn',
-              'Now we never fear the pain',
-            ][i],
-          )
-      await p.getByRole('button', { name: 'Lock my section', exact: true }).click()
+        other = t % 2 === 0 ? guest : host,
+        name = t % 2 === 0 ? 'Scotty' : 'Alex'
+      // the active player gets the studio; the other gets the get-ready screen with a tip
+      await expect(p.getByTestId('turn-studio')).toBeVisible({ timeout: 20000 })
+      await expect(other.getByTestId('turn-studio')).toHaveCount(0)
+      const waiting = other.getByLabel('Waiting for your turn')
+      await expect(waiting).toBeVisible()
+      await expect(waiting.locator('.waiting__who')).toContainText(`${name} IS`)
+      await expect(waiting).toContainText('Small tip')
+      if (t < turns - 1) await expect(waiting).toContainText('GET READY FOR YOUR TURN')
+      for (let i = 0; i < bars; i++) await p.getByLabel(`Bar ${i + 1}`, { exact: true }).fill(lines[i])
+      if (t === 0) {
+        // END is locked to the section: dragging it way past stays put
+        const end = p.getByRole('slider', { name: 'Section end' })
+        const before = await end.getAttribute('aria-valuenow')
+        await end.focus()
+        await p.keyboard.press('Shift+ArrowRight')
+        expect(await end.getAttribute('aria-valuenow')).toBe(before)
+        // …but it can trim inward by a beat
+        await p.keyboard.press('ArrowLeft')
+        expect(Number(await end.getAttribute('aria-valuenow'))).toBeLessThan(Number(before))
+      }
+      await p.getByRole('button', { name: 'Record', exact: true }).click()
+      await expect(waiting.locator('.waiting__who')).toContainText(`${name} IS RAPPING`, { timeout: 15000 })
+      await expect(p.getByRole('button', { name: 'Record again' })).toBeVisible({ timeout: 30000 })
+      await p.getByRole('button', { name: 'Submit turn' }).click()
+      if (t < turns - 1) await expect(other.getByTestId('turn-studio')).toBeVisible({ timeout: 20000 })
+      if (t < turns - 1) await expect(other.getByLabel('Last turn result')).toContainText(name)
     }
-    for (const p of [host, guest])
-      await p.getByRole('button', { name: 'Ready to perform', exact: true }).click()
-    await expect(host.getByRole('button', { name: 'Start shared performance' })).toBeEnabled()
-    await host.getByRole('button', { name: 'Start shared performance' }).click()
-    for (const p of [host, guest]) await expect(p.getByLabel('Performance mode')).toBeVisible()
-    for (const p of [host, guest])
-      await expect(p.locator('.duo-live h2')).toContainText('Scotty', { timeout: 15000 })
-    const positions = await Promise.all(
-      [host, guest].map((p) => p.getByLabel('Performance mode').getAttribute('data-time')),
-    )
-    expect(Math.abs(Number(positions[0]) - Number(positions[1]))).toBeLessThan(0.2)
-    for (const p of [host, guest])
-      await expect(p.locator('.duo-live h2')).toContainText('Alex', { timeout: 20000 })
     for (const p of [host, guest])
       await expect(p.getByText('COMBINED TRACK SCORE')).toBeVisible({ timeout: 50000 })
     const getSession = async (p: typeof host) =>
@@ -114,7 +108,9 @@ for (const [style, boundary] of [
       gs = await getSession(guest)
     expect(hs.id).toBe(gs.id)
     expect(hs.turns.map((t: any) => t.take.id)).toEqual(gs.turns.map((t: any) => t.take.id))
-    expect(new Set(hs.turns.map((t: any) => t.take.id)).size).toBe(2)
+    expect(new Set(hs.turns.map((t: any) => t.take.id)).size).toBe(turns)
+    // the trimmed END from turn 1 was kept
+    expect(hs.turns[0].section.end).toBeLessThan(hs.turns[0].end)
     const download = host.waitForEvent('download')
     await host.getByRole('button', { name: 'Download WAV', exact: true }).click()
     const file = await download
@@ -127,12 +123,13 @@ for (const [style, boundary] of [
     )
     if (style.startsWith('Standard') && boundary === 'Clean') {
       const original = hs.turns[1].take.id
-      await host.getByRole('button', { name: 'Retake my slot 1', exact: true }).click()
-      await expect(host.getByRole('button', { name: 'Retake my slot 1', exact: true })).toBeEnabled(
-        { timeout: 30000 },
-      )
+      await host.getByRole('button', { name: 'Redo my section 1', exact: true }).click()
+      await expect(host.getByTestId('turn-studio')).toBeVisible()
+      await host.getByRole('button', { name: 'Record', exact: true }).click()
+      await expect(host.getByRole('button', { name: 'Record again' })).toBeVisible({ timeout: 30000 })
+      await host.getByRole('button', { name: 'Submit turn' }).click()
       await expect
-        .poll(async () => (await getSession(guest)).turns[0].take.id)
+        .poll(async () => (await getSession(guest)).turns[0].take.id, { timeout: 30000 })
         .not.toBe(hs.turns[0].take.id)
       expect((await getSession(guest)).turns[1].take.id).toBe(original)
     }

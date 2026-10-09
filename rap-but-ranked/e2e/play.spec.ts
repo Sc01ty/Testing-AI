@@ -121,6 +121,19 @@ test('full song: beat → 4 rounds of write/record/judge → track complete', as
   await page.getByRole('button', { name: 'Loop preview' }).click()
   await page.getByRole('button', { name: 'Metronome' }).click()
 
+  // START / END: END is locked at two bars, but trims inward on the beat grid
+  const end = page.getByRole('slider', { name: 'Section end' })
+  const full = await end.getAttribute('aria-valuenow')
+  await expect(page.locator('.section-editor__len')).toHaveText('2 bars · max')
+  await end.focus()
+  await page.keyboard.press('Shift+ArrowRight')
+  await expect(end).toHaveAttribute('aria-valuenow', full!)
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.locator('.section-editor__len')).toHaveText('1¾ bars')
+  await expect(page.locator('.studio__section')).toContainText('END bar 2 · beat 4')
+  await page.keyboard.press('ArrowRight')
+  await expect(end).toHaveAttribute('aria-valuenow', full!)
+
   await writeAndRecord(page, BARS[0])
   // listen back: beat + vocal
   await page.getByRole('button', { name: 'Play back' }).click()

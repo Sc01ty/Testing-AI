@@ -98,3 +98,175 @@
 .room-code-input {text-transform:uppercase;letter-spacing:.14em}
 .room-voice {display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:16px 0}
 .room .segmented {margin:16px 0}
+
+/* ── online turns ─────────────────────────────────────────────────── */
+.room-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.room-bar b {
+  color: var(--purple-300);
+  letter-spacing: 0.14em;
+}
+.room-track__title {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 4.4vw, 48px);
+  line-height: 1.05;
+  margin: 4px 0 6px;
+}
+.room-track p {
+  color: var(--text-2);
+}
+.duo-name {
+  color: var(--duo-color);
+  font-weight: 800;
+}
+.duo-slot {
+  transition:
+    background var(--dur-3, 240ms) var(--ease-out, ease),
+    opacity var(--dur-3, 240ms) var(--ease-out, ease);
+}
+.duo-slot[data-state='next'] {
+  opacity: 0.5;
+}
+.duo-slot[data-state='now'] {
+  background: color-mix(in srgb, var(--duo-color) 16%, transparent);
+  box-shadow: 0 -10px 30px -18px var(--duo-color);
+}
+.duo-slot[data-state='done'] small {
+  color: var(--duo-color);
+  font-weight: 800;
+}
+.turn-studio .turn-you {
+  color: var(--duo-color);
+  font-weight: 900;
+}
+.turn-studio .challenge {
+  border-left: 3px solid var(--duo-color);
+}
+.turn-result {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-areas:
+    'who who who'
+    'rank score note';
+  align-items: center;
+  gap: 4px 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--duo-color) 7%, rgb(5 4 8 / 0.6));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--duo-color) 30%, transparent) inset;
+  animation: turn-result-in 420ms var(--ease-out, ease) both;
+}
+.turn-result .eyebrow {
+  grid-area: who;
+}
+.turn-result__rank {
+  grid-area: rank;
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 1;
+  color: var(--duo-color);
+  text-shadow: 0 0 24px var(--duo-color);
+}
+.turn-result__score {
+  grid-area: score;
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--text-1);
+}
+.turn-result p {
+  grid-area: note;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+@keyframes turn-result-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.waiting {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  text-align: center;
+  padding: clamp(28px, 6vw, 64px) 16px;
+  border-radius: var(--radius-2);
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--duo-color) 16%, transparent), transparent 70%),
+    rgb(5 4 8 / 0.55);
+  box-shadow: 0 0 0 1px var(--line-1) inset;
+}
+.waiting__who {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.3em 0.4em;
+  font-family: var(--font-display);
+  font-size: clamp(30px, 6.4vw, 78px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: var(--duo-color);
+  overflow-wrap: anywhere;
+}
+.waiting[data-activity='recording'] .waiting__who {
+  text-shadow: 0 0 40px var(--duo-color);
+}
+.waiting__live {
+  width: 0.32em;
+  height: 0.32em;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 18px var(--danger);
+  animation: waiting-pulse 1s ease-in-out infinite;
+}
+@keyframes waiting-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+.waiting__next {
+  font-family: var(--font-display);
+  font-size: clamp(14px, 2vw, 20px);
+  letter-spacing: 0.08em;
+  color: var(--text-1);
+}
+.waiting__challenge {
+  max-width: 640px;
+  color: var(--text-2);
+}
+.waiting__challenge .eyebrow {
+  display: block;
+  margin-bottom: 4px;
+}
+.waiting__tip {
+  max-width: 560px;
+  padding: 14px 18px;
+  border-radius: var(--radius-2);
+  background: rgb(255 255 255 / 0.03);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+  text-align: left;
+}
+.waiting__tip p {
+  margin-top: 6px;
+  color: var(--text-1);
+}
+.story-line b {
+  color: var(--duo-color);
+}
+.room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+:root[data-motion='reduced'] .waiting__live,
+:root[data-motion='reduced'] .turn-result {
+  animation: none;
+}

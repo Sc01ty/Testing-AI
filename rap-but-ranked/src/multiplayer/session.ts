@@ -4,6 +4,7 @@ import { scoreRound, finalResult } from '../scoring/round'
 import { contentWords } from '../lyrics/text'
 import { localModel } from '../director/localModel'
 import { settingsStore } from '../settings/settings'
+import { fitWindow, type SectionWindow, type SectionZone } from '../play/sectionWindow'
 
 export interface DuoTurn {
   index: number
@@ -20,6 +21,21 @@ export interface DuoTurn {
   take: TakeMeta | null
   result: RoundResult | null
   captureId?: string
+  /** Online: where the player put START / END inside their bars (beat-file seconds). */
+  section?: { start: number; end: number } | null
+}
+
+/** Where an online turn's START / END may go: its own bars (plus the overlap beat), never the next player's. */
+export function turnZone(s: Pick<DuoSession, 'beatGrid'>, t: DuoTurn): SectionZone {
+  const step = 60 / s.beatGrid.bpm
+  const min = t.start + t.vocalOffset
+  return { min, max: t.end, maxLen: t.end - min, minLen: step * s.beatGrid.beatsPerBar, step, origin: s.beatGrid.introOffset }
+}
+
+/** The turn's recording window: what the player chose, or all of its bars. */
+export function turnWindow(s: Pick<DuoSession, 'beatGrid'>, t: DuoTurn): SectionWindow {
+  const zone = turnZone(s, t)
+  return fitWindow(zone, t.section, { start: zone.min, end: zone.max })
 }
 export function duoObservations(s: DuoSession): string[] {
   const notes: string[] = []
@@ -60,7 +76,7 @@ export interface DuoSession {
   style: 'standard' | 'quick'
   turns: DuoTurn[]
   storyDirection: string
-  status: 'preparing' | 'complete'
+  status: 'preparing' | 'active' | 'complete'
   master: TakeMeta | null
   createdAt: number
   updatedAt: number
@@ -201,6 +217,9 @@ export function scoreDuoTurn(
   const secondsPerBeat = 60 / s.beatGrid.bpm,
     secondsPerBar = secondsPerBeat * s.beatGrid.beatsPerBar
   const results: RoundResult[] = []
+  // each pair of lines gets its share of the chosen START → END window
+  const win = turnWindow(s, t)
+  const share = (win.end - win.start) / t.lyrics.length
   for (let i = 0; i < t.lyrics.length; i += 2) {
     const lyrics = [t.lyrics[i], t.lyrics[i + 1]] as [string, string]
     results.push(
@@ -223,8 +242,8 @@ export function scoreDuoTurn(
               samples: audio.samples,
               sampleRate: audio.sampleRate,
               beatTimeSec: audio.startTime,
-              sectionStart: t.start + i * secondsPerBar,
-              sectionEnd: t.start + (i + 2) * secondsPerBar,
+              sectionStart: win.start + i * share,
+              sectionEnd: win.start + (i + 2) * share,
               secondsPerBeat,
             }
           : null,

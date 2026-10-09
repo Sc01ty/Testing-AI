@@ -7,7 +7,7 @@ import type { VocalClip } from '../../audio/mix'
 import type { BeatMeta, Session } from '../../domain/types'
 import { formatBytes } from '../../lib/format'
 import { buildFullTrack, downloadTrack, roundAt } from '../../play/fullTrack'
-import { gridOf, sectionFor } from '../../play/sessionLogic'
+import { gridOf, roundSection } from '../../play/sessionLogic'
 import { arrangedClips } from '../../play/vocals'
 import { finalResult } from '../../scoring/round'
 import { Waveform } from '../beats/Waveform'
@@ -119,7 +119,7 @@ export function TrackComplete({
     if (!ctx) return
     const id = `take:${r.take.id}`
     if (tp.playing && tp.id === id) return trackPlayer.stop()
-    const sec = sectionFor(grid, i)
+    const sec = roundSection(session, grid, i)
     const clips: VocalClip[] = await arrangedClips(ctx, [r.take])
     await trackPlayer.play(id, track?.beatBuffer ?? null, clips, Math.max(0, sec.start - sec.grid.secondsPerBeat), sec.end + 0.4)
   }

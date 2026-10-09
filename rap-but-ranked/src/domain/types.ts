@@ -133,6 +133,8 @@ export interface Round {
   lyrics: [string, string]
   take: TakeMeta | null
   result: RoundResult | null
+  /** Where the player put START / END (beat-file seconds). Absent = the round's natural two bars. */
+  section?: { start: number; end: number }
   /** Help used on this round (context, not a penalty). */
   assistance?: AssistanceRecord[]
 }

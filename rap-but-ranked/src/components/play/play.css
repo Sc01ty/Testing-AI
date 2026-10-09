@@ -1450,3 +1450,164 @@
 .fs-category-disabled {opacity:.5;pointer-events:none}
 .cat details {font-size:12px;margin-top:8px;color:var(--muted)}
 .cat details summary {cursor:pointer}
+
+/* ── START / END section editor (over the beat lane) ─────────────── */
+.timeline__wave {
+  position: relative;
+  min-width: 0;
+}
+.section-editor {
+  --sec-accent: var(--purple-300);
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+}
+.section-editor__shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(5 4 8 / 0.62);
+  pointer-events: none;
+}
+.section-editor__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--line-3);
+  border-right: 1px dashed var(--line-3);
+  pointer-events: none;
+}
+.section-editor__window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  cursor: grab;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--sec-accent) 9%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sec-accent) 45%, transparent) inset;
+  transition:
+    box-shadow var(--dur-2, 160ms) var(--ease-out, ease),
+    background var(--dur-2, 160ms) var(--ease-out, ease);
+  outline: none;
+}
+.section-editor__window:hover,
+.section-editor__window:focus-visible,
+.section-editor[data-active] .section-editor__window {
+  background: color-mix(in srgb, var(--sec-accent) 14%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--sec-accent) 80%, transparent) inset,
+    0 0 28px -10px var(--sec-accent);
+}
+.section-editor[data-active='move'] .section-editor__window {
+  cursor: grabbing;
+}
+.section-editor__window[data-bump] {
+  animation: section-bump 220ms var(--ease-out, ease) both;
+}
+@keyframes section-bump {
+  30% {
+    box-shadow:
+      0 0 0 1px var(--danger) inset,
+      0 0 26px -8px var(--danger);
+  }
+}
+.section-editor__len {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(5 4 8 / 0.75);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-2);
+  pointer-events: none;
+}
+.section-editor__len b {
+  color: var(--sec-accent);
+}
+.section-editor__handle {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 16px;
+  cursor: ew-resize;
+  outline: none;
+  z-index: 1;
+}
+.section-editor__handle--start {
+  left: -8px;
+}
+.section-editor__handle--end {
+  right: -8px;
+}
+.section-editor__handle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--sec-accent);
+  box-shadow: 0 0 12px var(--sec-accent);
+  transition: width 120ms var(--ease-out, ease);
+}
+.section-editor__handle:hover::before,
+.section-editor__handle:focus-visible::before,
+.section-editor[data-active='start'] .section-editor__handle--start::before,
+.section-editor[data-active='end'] .section-editor__handle--end::before {
+  width: 4px;
+}
+.section-editor__tag {
+  position: absolute;
+  top: -14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--sec-accent);
+  color: var(--bg-0);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+.section-editor__handle--start .section-editor__tag {
+  left: 7px;
+}
+.section-editor__handle--end .section-editor__tag {
+  right: 7px;
+}
+.section-editor[data-disabled] {
+  pointer-events: none;
+}
+.section-editor[data-disabled] .section-editor__handle,
+.section-editor[data-disabled] .section-editor__len {
+  opacity: 0.35;
+}
+.timeline__lane--beat {
+  margin-top: 14px;
+}
+.studio__section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+.studio__section b {
+  color: var(--text-1);
+  font-weight: 700;
+}
+.studio__section [data-stale] {
+  color: var(--danger);
+}
+:root[data-motion='reduced'] .section-editor__window[data-bump] {
+  animation: none;
+}

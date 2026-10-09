@@ -84,31 +84,78 @@ test('lobby access, authority, immutable turns, signalling and closure', async (
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }
-  await t.test('only host can configure or start', async () => {
-    assert.equal((await call('configure', g, { session })).status, 403)
-    assert.equal((await call('configure', h, { session })).status, 200)
-    assert.equal((await call('start', g)).status, 403)
-    assert.equal((await call('start', h)).status, 409)
-  })
+  // a tiny valid WAV for submissions
+  const wav = (() => {
+    const n = 800, buf = Buffer.alloc(44 + n * 2)
+    buf.write('RIFF', 0); buf.writeUInt32LE(36 + n * 2, 4); buf.write('WAVE', 8); buf.write('fmt ', 12)
+    buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20); buf.writeUInt16LE(1, 22); buf.writeUInt32LE(8000, 24)
+    buf.writeUInt32LE(16000, 28); buf.writeUInt16LE(2, 32); buf.writeUInt16LE(16, 34); buf.write('data', 36); buf.writeUInt32LE(n * 2, 40)
+    return new Blob([buf], { type: 'audio/wav' })
+  })()
+  async function submit(access, values, audio = wav) {
+    const form = new FormData()
+    form.append('payload', JSON.stringify({ action: 'submit', ...access, ...values }))
+    if (audio) form.append('audio', audio, 'vocal.wav')
+    const r = await fetch(endpoint, { method: 'POST', body: form })
+    return { status: r.status, ...(await r.json()) }
+  }
   const lyrics = ['I paid the rent', 'I bought a house', 'Now mum can rest', 'I did my best']
-  await t.test('only current player may lock their section', async () => {
-    assert.equal((await call('lock', g, { index: 0, lyrics })).status, 409)
-    assert.equal((await call('lock', h, { index: 0, lyrics })).status, 200)
-    assert.equal((await call('lock', h, { index: 1, lyrics })).status, 409)
-    assert.equal((await call('lock', g, { index: 1, lyrics })).status, 200)
+  const turnAt = (i) => ({ start: beat.introOffset + i * count * spbar, end: beat.introOffset + (i + 1) * count * spbar })
+  const take = (i) => ({ beatTimeSec: turnAt(i).start - 0.3, durationSec: 4, sampleRate: 8000, peaks: [], sectionStartSec: turnAt(i).start, sectionEndSec: turnAt(i).end })
+  const result = { score: 71, rank: 'B', feedback: ['Clear story.'], categories: [] }
+  await t.test('only host can configure', async () => {
+    assert.equal((await call('configure', g, { session })).status, 403)
+    const configured = await call('configure', h, { session })
+    assert.equal(configured.status, 200)
+    assert.equal(configured.session.status, 'active')
+    assert.match(configured.session.id, /^room-/)
   })
-  await t.test('start needs two ready players and publishes a future start', async () => {
-    assert.equal((await call('ready', h)).status, 200)
-    assert.equal((await call('start', h)).status, 409)
-    await call('ready', g)
-    const started = await call('start', h)
-    assert.equal(started.status, 200)
-    assert.ok(started.startAt - started.now >= 5500)
-    assert.deepEqual(
-      started.session.turns.map((t) => [t.start, t.end]),
-      session.turns.map((t) => [t.start, t.end]),
-    )
-    assert.equal((await call('lock', g, { index: 1, lyrics })).status, 409)
+  await t.test('turns go in order and only to their owner', async () => {
+    const sec0 = turnAt(0)
+    assert.equal((await submit(g, { index: 0, lyrics, section: sec0, take: take(0), result })).status, 403)
+    assert.equal((await submit(h, { index: 1, lyrics, section: turnAt(1), take: take(1), result })).status, 403)
+    assert.equal((await submit(h, { index: 0, lyrics: lyrics.slice(0, 2), section: sec0, take: take(0), result })).status, 400)
+    assert.equal((await submit(h, { index: 0, lyrics, section: sec0, take: take(0), result }, null)).status, 413)
+  })
+  await t.test('START / END must stay inside the section and can be trimmed', async () => {
+    const sec0 = turnAt(0)
+    const tooLong = { start: sec0.start, end: sec0.end + spbar }
+    assert.equal((await submit(h, { index: 0, lyrics, section: tooLong, take: take(0), result })).status, 400)
+    const early = { start: sec0.start - spbar, end: sec0.end - spbar }
+    assert.equal((await submit(h, { index: 0, lyrics, section: early, take: take(0), result })).status, 400)
+    const trimmed = { start: sec0.start + spbar / 4, end: sec0.end - spbar / 2 }
+    const next = { prompt: 'Answer the rent line.', focus: ['rent'], storyBeat: 'response', source: 'basic' }
+    const ok = await submit(h, { index: 0, lyrics, section: trimmed, take: take(0), result, challenge: next })
+    assert.equal(ok.status, 200)
+    assert.deepEqual(ok.session.turns[0].section, trimmed)
+    assert.match(ok.session.turns[0].take.id, /^room-[A-Z2-9]{7}:[a-f0-9]{24}$/)
+    assert.equal(ok.session.turns[1].challenge.prompt, 'Answer the rent line.')
+    assert.equal(ok.session.status, 'active')
+    // the take can be fetched by the other player
+    const audio = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'audio', ...g, id: ok.session.turns[0].take.id }) })
+    assert.equal(audio.status, 200)
+    assert.equal((await audio.arrayBuffer()).byteLength, 44 + 1600)
+  })
+  await t.test('activity is shared without bumping the version', async () => {
+    const before = (await call('poll', h)).version
+    assert.equal((await call('activity', g, { state: 'hacking' })).status, 400)
+    assert.equal((await call('activity', g, { state: 'recording' })).status, 200)
+    const state = await call('poll', h, { version: before })
+    assert.equal(state.unchanged, true)
+    assert.equal(state.activity[1].state, 'recording')
+  })
+  await t.test('the last submit completes the track; owners can redo their own section', async () => {
+    const done = await submit(g, { index: 1, lyrics, section: turnAt(1), take: take(1), result })
+    assert.equal(done.status, 200)
+    assert.equal(done.session.status, 'complete')
+    assert.deepEqual(done.activity, [null, null])
+    assert.equal((await submit(g, { index: 0, lyrics, section: turnAt(0), take: take(0), result })).status, 403)
+    const firstTake = done.session.turns[0].take.id
+    const redo = await submit(h, { index: 0, lyrics, section: turnAt(0), take: take(0), result: { ...result, score: 90 } })
+    assert.equal(redo.status, 200)
+    assert.notEqual(redo.session.turns[0].take.id, firstTake)
+    assert.equal(redo.session.turns[0].result.score, 90)
+    assert.equal(redo.session.turns[1].take.id, done.session.turns[1].take.id)
   })
   await t.test('signals delivered only to the other authenticated participant', async () => {
     await call('signal', h, { signal: { type: 'hello', from: 'host' } })
@@ -117,10 +164,6 @@ test('lobby access, authority, immutable turns, signalling and closure', async (
     assert.deepEqual((await call('poll', g)).signals, [])
   })
   await t.test('host close prevents subsequent join or reuse', async () => {
-    const reset=await call('reset',h)
-    assert.equal(reset.startAt,null)
-    assert.equal(reset.session.status,'preparing')
-    assert.equal(reset.members.every(m=>m&&!m.ready),true)
     assert.equal((await call('leave', h)).status, 200)
     assert.equal((await call('poll', g)).status, 410)
   })

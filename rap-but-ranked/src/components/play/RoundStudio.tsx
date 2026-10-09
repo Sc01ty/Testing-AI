@@ -8,7 +8,8 @@ import { encodeWav } from '../../audio/wav'
 import type { Round, SavedBeat, Session } from '../../domain/types'
 import { formatTime } from '../../lib/format'
 import { lineSyllables } from '../../lyrics/text'
-import { barsDone, gridOf, runningScore, sectionFor, totalRounds } from '../../play/sessionLogic'
+import { barsDone, gridOf, roundSections, runningScore, setRoundSection, totalRounds } from '../../play/sessionLogic'
+import { barBeatLabel, endLabel, lengthLabel } from '../../play/sectionWindow'
 import { forgetTake, rememberTake } from '../../play/takeAudio'
 import { arrangedClips } from '../../play/vocals'
 import { useSettings } from '../../settings/useSettings'
@@ -16,6 +17,7 @@ import { deleteTakeAudio, getBeatAudio, saveTakeAudio } from '../../storage'
 import { Waveform } from '../beats/Waveform'
 import { Icon } from '../beats/icons'
 import { VocalLane } from './VocalLane'
+import { SectionEditor } from './SectionEditor'
 import { SongStrip, type VocalShape } from './SongTimeline'
 
 /**
@@ -37,10 +39,11 @@ export function RoundStudio({
   onSubmit: () => void
   onHelp: () => void
 }) {
-  const sec = useMemo(() => sectionFor(beat, round.index), [beat, round.index])
+  const sections = useMemo(() => roundSections(session, beat), [session, beat])
+  const sec = sections[round.index]
   const spb = sec.grid.secondsPerBeat
-  const viewFrom = Math.max(0, sec.start - sec.grid.secondsPerBar)
-  const viewTo = Math.min(beat.durationSec, sec.end + spb)
+  const viewFrom = Math.max(0, Math.min(sec.zone.min, sec.start) - sec.grid.secondsPerBar)
+  const viewTo = Math.min(beat.durationSec, Math.max(sec.zone.max, sec.end) + spb)
   const playable: PlayableBeat = useMemo(() => ({ id: beat.id, getBlob: () => getBeatAudio(beat.id) }), [beat.id])
   const player = useBeatPlayer()
   const tp = useTrackPlayer()
@@ -59,6 +62,20 @@ export function RoundStudio({
   const playingBack = tp.playing && tp.id === `take:${takeId}`
   const total = totalRounds(session)
   const running = runningScore(session)
+  // the take was recorded for a different START/END → it has to be recorded again
+  const stale = !!round.take && (Math.abs(round.take.sectionStartSec - sec.start) > 1e-3 || Math.abs(round.take.sectionEndSec - sec.end) > 1e-3)
+  const moveSection = (w: { start: number; end: number }) => {
+    if (previewing) beatPlayer.stop()
+    update((s) => setRoundSection(s, round.index, w), { debounce: true })
+  }
+  const slotStrip = useMemo(() => {
+    const bar = sec.grid.secondsPerBar
+    const out = sections.map((x) => ({ start: x.start, end: x.end }))
+    for (let i = out.length; i < total; i++) out.push({ start: out[i - 1].end, end: out[i - 1].end + 2 * bar })
+    return out
+  }, [sections, total, sec.grid.secondsPerBar])
+  const where = (t: number) => barBeatLabel(t, beat.introOffset, spb, beat.beatsPerBar)
+  const whereEnd = (t: number) => endLabel(t, beat.introOffset, spb, beat.beatsPerBar)
 
   // stop everything when leaving the round
   useEffect(
@@ -200,7 +217,7 @@ export function RoundStudio({
   }, [])
 
   const ready = round.lyrics[0].trim().length > 0 && round.lyrics[1].trim().length > 0
-  const canSubmit = ready && !!round.take && !recording
+  const canSubmit = ready && !!round.take && !recording && !stale
   const position = useCallback(() => {
     if (playingBack) return trackPlayer.position(`take:${takeId}`)
     return beatPlayer.position(beat.id)
@@ -226,7 +243,7 @@ export function RoundStudio({
     <div className="studio">
       <div className="studio__top enter" style={{ '--i': 1 } as CSSProperties}>
         <div className="progress">
-          <SongStrip grid={gridOf(session, beat)!} bars={session.length} vocals={songVocals} current={round.index} />
+          <SongStrip grid={gridOf(session, beat)!} bars={session.length} vocals={songVocals} current={round.index} sections={slotStrip} />
         </div>
         <div className="studio__meta">
           <span className="eyebrow">
@@ -243,7 +260,7 @@ export function RoundStudio({
 
       <section className="challenge enter" style={{ '--i': 2 } as CSSProperties} key={round.index}>
         <span className="eyebrow">
-          Challenge {round.index + 1} / {total} · bars {sec.firstBar + 1}–{sec.firstBar + 2} · {round.challenge.storyBeat}
+          Challenge {round.index + 1} / {total} · {where(sec.start)} → {whereEnd(sec.end)} · {round.challenge.storyBeat}
           <span className={`source-tag source-tag--${round.challenge.source}`}>{round.challenge.source === 'local-ai' ? 'Rap AI' : 'Basic director'}</span>
         </span>
         <h2 className="challenge__prompt">{round.challenge.prompt}</h2>
@@ -273,6 +290,7 @@ export function RoundStudio({
       <section className="timeline enter" style={{ '--i': 4 } as CSSProperties} data-recording={recording ? '' : undefined}>
         <div className="timeline__lane timeline__lane--beat">
           <span className="timeline__label">Beat</span>
+          <div className="timeline__wave">
           <Waveform
             peaks={peaksWindow}
             duration={viewTo - viewFrom}
@@ -286,8 +304,19 @@ export function RoundStudio({
             highlight={[sec.start - viewFrom, sec.end - viewFrom]}
             position={relPosition}
             animate={previewing || playingBack}
-            label={`Beat, bars ${sec.firstBar + 1} to ${sec.firstBar + 2}`}
+            label="Beat waveform around this section"
           />
+          <SectionEditor
+            zone={sec.zone}
+            value={{ start: sec.start, end: sec.end }}
+            onChange={moveSection}
+            viewFrom={viewFrom}
+            viewTo={viewTo}
+            secondsPerBar={sec.grid.secondsPerBar}
+            beatsPerBar={beat.beatsPerBar}
+            disabled={recording}
+          />
+          </div>
         </div>
         <div className="timeline__lane">
           <span className="timeline__label">You</span>
@@ -311,6 +340,13 @@ export function RoundStudio({
         )}
         {phase === 'recording' && count === null && <div className="rec-dot">REC</div>}
       </section>
+
+      <p className="studio__section enter" style={{ '--i': 5 } as CSSProperties}>
+        <span>
+          START <b>{where(sec.start)}</b> · END <b>{whereEnd(sec.end)}</b> · <b>{lengthLabel(sec, sec.grid.secondsPerBar)}</b> (2 bars max)
+        </span>
+        <span>{stale ? <span data-stale="">Section moved — record again to fit it.</span> : 'Drag START / END to place your bars. ← → nudges a beat, Shift a bar.'}</span>
+      </p>
 
       <section className="transport enter" style={{ '--i': 5 } as CSSProperties}>
         <span className="tgroup">
@@ -358,8 +394,10 @@ export function RoundStudio({
           (!ready
             ? 'Write both bars, then record them.'
             : !round.take
-              ? `🎧 Headphones on, then Record — you get a bar of count-in (3, 2, 1)${prevTake && settings.hearLastTake ? ' over the end of your last take' : ''}, then rap bars ${sec.firstBar + 1}–${sec.firstBar + 2}. It stops by itself.`
-              : `Take saved (${formatTime(round.take.durationSec)}). Play it back, retake, or submit.`)}
+              ? `🎧 Headphones on, then Record — you get a bar of count-in (3, 2, 1)${prevTake && settings.hearLastTake ? ' over the end of your last take' : ''}, then rap from ${where(sec.start)} until ${whereEnd(sec.end)}. It stops by itself.`
+              : stale
+                ? 'You moved the section since this take. Record again so it lands between START and END.'
+                : `Take saved (${formatTime(round.take.durationSec)}). Play it back, retake, or submit.`)}
       </p>
     </div>
   )

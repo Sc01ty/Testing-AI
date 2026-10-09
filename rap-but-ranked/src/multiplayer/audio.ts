@@ -44,8 +44,10 @@ export async function duoMix(s: DuoSession, ctx: BaseAudioContext) {
   }
   if (s.master) await add(s.master.id, s.master.beatTimeSec, masterRegions(s))
   for (const t of s.turns)
-    if (t.take)
-      await add(t.take.id, t.take.beatTimeSec, [{ start: t.start + t.vocalOffset, end: t.end }])
+    if (t.take) {
+      const w = t.section ?? { start: t.start + t.vocalOffset, end: t.end }
+      await add(t.take.id, t.take.beatTimeSec, [{ start: w.start, end: w.end }])
+    }
   return {
     beatBuffer,
     clips:[...clips,...await adlibClips(s.adlibs,ctx)],
