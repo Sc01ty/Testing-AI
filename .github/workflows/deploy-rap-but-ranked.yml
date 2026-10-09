@@ -1,9 +1,6 @@
-# Builds RAP BUT RANKED (rap-but-ranked/) and publishes it to GitHub Pages
-# on every push to main: https://sc01ty.github.io/Testing-AI/
-#
-# One-time setup on GitHub: Settings → Pages → Build and deployment →
-# Source: "GitHub Actions".
-name: Deploy Rap But Ranked
+# Check the existing app. Production is deployed to the Scotty Systems PHP host;
+# GitHub Pages cannot run its room API and is not a second production target.
+name: Check Rap But Ranked
 
 on:
   push:
@@ -15,12 +12,10 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# one deploy at a time; a newer push replaces a queued one
+# A newer push replaces queued checks.
 concurrency:
-  group: pages
+  group: rap-checks
   cancel-in-progress: true
 
 jobs:
@@ -43,16 +38,8 @@ jobs:
         run: npx vitest run
       - name: Build
         run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: rap-but-ranked-build
           path: rap-but-ranked/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 7
