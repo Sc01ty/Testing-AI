@@ -3,7 +3,8 @@ import { audio } from '../audio/AudioEngine'
 import { Logo } from '../components/brand/Logo'
 import { MenuBackdrop } from '../components/menu/MenuBackdrop'
 import { router } from '../app/router'
-import { MENU_ROUTES, type RouteId } from '../app/routes'
+import { MENU_ROUTES, NAV_ROUTES, type RouteId } from '../app/routes'
+import { RankChip } from '../components/ranked/RankChip'
 import { isReducedMotion } from '../motion/motion'
 import './MenuView.css'
 
@@ -29,7 +30,12 @@ const GLOW_POSITIONS: [string, string][] = [
   ['80%', '52%'],
   ['70%', '66%'],
   ['82%', '80%'],
+  ['30%', '88%'],
+  ['46%', '88%'],
 ]
+
+/** Keyboard order: the four big items, then FEED and LEADERBOARDS in the row underneath. */
+const ALL_ITEMS = [...MENU_ROUTES, ...NAV_ROUTES]
 
 /** Sting timings (ms) — must match the CSS delays in MenuView.css */
 const MENU_AT = 2000
@@ -46,7 +52,7 @@ function fontsReady() {
 export function MenuView({ from }: { from: RouteId | null }) {
   const [phase, setPhase] = useState<Phase>(() => (introDone || isReducedMotion() ? 'menu' : 'loading'))
   const [overlay, setOverlay] = useState(phase !== 'menu')
-  const initialIndex = Math.max(0, MENU_ROUTES.findIndex((r) => r.id === from))
+  const initialIndex = Math.max(0, ALL_ITEMS.findIndex((r) => r.id === from))
   const [active, setActive] = useState(initialIndex)
   const [launching, setLaunching] = useState<RouteId | null>(null)
   const [returning] = useState(from)
@@ -137,8 +143,13 @@ export function MenuView({ from }: { from: RouteId | null }) {
     if (phase !== 'menu') return
     const onKey = (e: KeyboardEvent) => {
       if (launching) return
-      const n = MENU_ROUTES.length
-      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      const n = ALL_ITEMS.length
+      const big = MENU_ROUTES.length
+      if (active >= big && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'a' || e.key === 'A' || e.key === 'd' || e.key === 'D')) {
+        e.preventDefault()
+        setActive((i) => big + ((i - big + (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' ? -1 : 1) + NAV_ROUTES.length) % NAV_ROUTES.length))
+        audio.play('move')
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
         e.preventDefault()
         setActive((i) => (i + 1) % n)
         audio.play('move')
@@ -149,7 +160,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
       } else if (e.key === 'Enter' || e.key === ' ') {
         if (document.activeElement && itemRefs.current.includes(document.activeElement as HTMLButtonElement)) return
         e.preventDefault()
-        launch(MENU_ROUTES[active].id)
+        launch(ALL_ITEMS[active].id)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -223,15 +234,39 @@ export function MenuView({ from }: { from: RouteId | null }) {
             </li>
           ))}
         </ul>
+        <div className="menu-nav" role="group" aria-label="Community">
+          {NAV_ROUTES.map((r, j) => {
+            const i = MENU_ROUTES.length + j
+            return (
+              <button
+                key={r.id}
+                ref={(el) => {
+                  itemRefs.current[i] = el
+                }}
+                className="menu-nav__item"
+                style={{ '--i': i } as CSSProperties}
+                data-active={active === i ? '' : undefined}
+                data-launching={launching === r.id ? '' : undefined}
+                tabIndex={inMenu ? 0 : -1}
+                onPointerEnter={(e) => hoverItem(i, e)}
+                onFocus={() => setActive(i)}
+                onClick={() => launch(r.id)}
+              >
+                <span className="menu-nav__label" style={{ viewTransitionName: `title-${r.id}` } as CSSProperties}>
+                  {r.label}
+                </span>
+                <span className="menu-nav__tagline">{r.tagline}</span>
+              </button>
+            )
+          })}
+        </div>
       </nav>
 
-      <MenuBackdrop active={inMenu ? MENU_ROUTES[active].id : null} />
+
+      <MenuBackdrop active={inMenu && active < MENU_ROUTES.length ? MENU_ROUTES[active].id : null} />
 
       <div className="title__chrome title__chrome--tr" aria-hidden={!inMenu}>
-        <span className="rank-chip">
-          <span className="eyebrow">Rank</span>
-          <b>UNRANKED</b>
-        </span>
+        <RankChip tabIndex={inMenu ? 0 : -1} onClick={() => launch('profile')} />
       </div>
       <div className="title__chrome title__chrome--bl" aria-hidden={!inMenu}>
         <span className="keyhint">
@@ -243,7 +278,7 @@ export function MenuView({ from }: { from: RouteId | null }) {
         </span>
       </div>
       <div className="title__chrome title__chrome--br" aria-hidden={!inMenu}>
-        <span className="eyebrow">v0.12</span>
+        <span className="eyebrow">v0.13</span>
       </div>
     </div>
   )

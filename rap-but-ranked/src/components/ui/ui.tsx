@@ -8,7 +8,7 @@ import './ui.css'
  * `hoverSound`, so we decide deliberately what makes noise.
  */
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost' | 'quiet'
+  variant?: 'primary' | 'ghost' | 'quiet' | 'danger'
   clickSound?: UiSoundId | null
   hoverSound?: UiSoundId | null
   icon?: ReactNode

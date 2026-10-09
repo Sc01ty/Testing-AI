@@ -1,0 +1,341 @@
+/* Rank emblems, the menu rank chip, the RP reveal and the rank-up moment. */
+
+/* tier colours: used for glows, bars and labels around the emblem (inherited, so set it on any wrapper with data-tier) */
+:root { --tier: var(--purple-300); }
+.emblem--open-mic, .rank-up--open-mic, [data-tier='open-mic'] { --tier: #a9a6ba; }
+.emblem--cypher, .rank-up--cypher, [data-tier='cypher'] { --tier: #e6a774; }
+.emblem--underground, .rank-up--underground, [data-tier='underground'] { --tier: #6fd2c7; }
+.emblem--breakout, .rank-up--breakout, [data-tier='breakout'] { --tier: #7cc0ff; }
+.emblem--mainstage, .rank-up--mainstage, [data-tier='mainstage'] { --tier: #ffd870; }
+.emblem--headliner, .rank-up--headliner, [data-tier='headliner'] { --tier: #bff4ff; }
+.emblem--icon, .rank-up--icon, [data-tier='icon'] { --tier: #d59bff; }
+.emblem--hall-of-fame, .rank-up--hall-of-fame, [data-tier='hall-of-fame'] { --tier: #ffe9a8; }
+
+.emblem {
+  position: relative;
+  display: inline-grid;
+  justify-items: center;
+  width: var(--size);
+  flex: none;
+}
+.emblem img {
+  display: block;
+  width: var(--size);
+  height: var(--size);
+  filter: drop-shadow(0 0 calc(var(--size) * 0.12) color-mix(in srgb, var(--tier) 35%, transparent));
+  user-select: none;
+}
+.emblem--placing {
+  color: var(--text-3);
+}
+.emblem__divs {
+  display: flex;
+  gap: calc(var(--size) * 0.04);
+  margin-top: calc(var(--size) * -0.04);
+}
+.emblem__divs i {
+  width: calc(var(--size) * 0.13);
+  height: calc(var(--size) * 0.045);
+  min-height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.12);
+}
+.emblem__divs i[data-on] {
+  background: var(--tier);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tier) 60%, transparent);
+}
+
+/* ── menu chip ─────────────────────────────────────────────────── */
+.rank-chip--live {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  padding: 7px 18px 7px 8px;
+  gap: 12px;
+  text-align: left;
+  transition:
+    border-color var(--dur-2) var(--ease-out),
+    background var(--dur-2) var(--ease-out);
+}
+.rank-chip--live:hover,
+.rank-chip--live:focus-visible {
+  border-color: var(--line-3);
+  background: rgb(27 20 44 / 0.75);
+  outline: none;
+}
+.rank-chip__text {
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+}
+.rank-chip__text b {
+  color: var(--text-1) !important;
+}
+.rank-chip__text small {
+  font-size: 0.68rem;
+  color: var(--text-3);
+}
+.rank-chip__bar,
+.rp-reveal__bar {
+  position: relative;
+  height: 4px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.08);
+  overflow: hidden;
+}
+.rank-chip__bar i,
+.rp-reveal__bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--p) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--purple-500), var(--purple-300));
+}
+
+/* ── RP reveal (end of a track) ───────────────────────────────── */
+.rp-reveal {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    'emblem main delta'
+    'emblem lines lines';
+  align-items: center;
+  gap: 6px 26px;
+  padding: 22px 26px;
+  border-radius: var(--radius-3);
+  background:
+    radial-gradient(60% 140% at 0% 50%, rgb(var(--glow) / 0.16), transparent 70%),
+    rgb(12 9 20 / 0.85);
+  box-shadow: 0 0 0 1px var(--line-2) inset;
+}
+.rp-reveal__emblem {
+  grid-area: emblem;
+  animation: emblem-in var(--dur-4) var(--ease-back) both;
+}
+.rp-reveal__emblem[data-flash] {
+  animation: emblem-pop 420ms var(--ease-back);
+}
+.rp-reveal__main {
+  grid-area: main;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.rp-reveal__head {
+  display: grid;
+  gap: 2px;
+}
+.rp-reveal__rank {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.rp-reveal__bar {
+  height: 12px;
+  border-radius: 6px;
+  overflow: visible;
+}
+.rp-reveal__bar i {
+  box-shadow: 0 0 18px rgb(var(--glow) / 0.6);
+}
+.rp-reveal__bar[data-flash] i {
+  animation: bar-flash 360ms var(--ease-out);
+}
+.rp-reveal__next {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-mid);
+  color: var(--text-3);
+}
+.rp-reveal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.rp-reveal__to {
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.rp-reveal__verdict {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--purple-200);
+  animation: verdict-in var(--dur-4) var(--ease-back) both;
+}
+.rp-reveal__verdict--near-miss {
+  color: #ffd870;
+  animation:
+    verdict-in var(--dur-4) var(--ease-back) both,
+    near-pulse 1.2s ease-in-out 0.6s 3;
+}
+.rp-reveal__verdict--promoted,
+.rp-reveal__verdict--division-up {
+  color: #a8ffcf;
+}
+.rp-reveal__verdict--demoted,
+.rp-reveal__verdict--division-down {
+  color: var(--text-3);
+}
+.rp-reveal__delta {
+  grid-area: delta;
+  display: grid;
+  justify-items: end;
+}
+.rp-reveal__delta b {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.rp-reveal__delta b[data-sign='+'] {
+  color: #a8ffcf;
+  text-shadow: 0 0 24px rgb(120 255 190 / 0.35);
+}
+.rp-reveal__delta b[data-sign='-'] {
+  color: #ff9db0;
+}
+.rp-reveal__lines {
+  grid-area: lines;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+.rp-reveal__lines li {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: rgb(255 255 255 / 0.025);
+  font-size: 0.75rem;
+  color: var(--text-2);
+  animation: line-in 260ms var(--ease-back) both;
+}
+.rp-reveal__lines b {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.rp-reveal--still .rp-reveal__lines li {
+  animation: none;
+}
+
+@media (max-width: 720px) {
+  .rp-reveal {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'emblem delta'
+      'main main'
+      'lines lines';
+    padding: 18px;
+  }
+}
+
+/* ── rank-up overlay ──────────────────────────────────────────── */
+.rank-up {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(40% 50% at 50% 46%, color-mix(in srgb, var(--tier) 26%, transparent), transparent 70%),
+    rgb(4 3 8 / 0.94);
+  animation: fade-in 260ms var(--ease-out) both;
+}
+.rank-up__sweep {
+  position: absolute;
+  inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 42%, rgb(255 255 255 / 0.12) 50%, transparent 58%);
+  animation: sweep 1.4s var(--ease-out) 0.35s both;
+}
+.rank-up__stack {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 16px;
+}
+.rank-up__emblem {
+  animation: slam 700ms var(--ease-back) 80ms both;
+}
+.rank-up__emblem .emblem img {
+  filter: drop-shadow(0 0 50px color-mix(in srgb, var(--tier) 55%, transparent));
+}
+.rank-up__kicker {
+  animation: rise 500ms var(--ease-out) 500ms both;
+}
+.rank-up__what {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: var(--tier);
+  animation: rise 500ms var(--ease-out) 620ms both;
+}
+.rank-up__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 4.4rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  animation: rise 600ms var(--ease-back) 700ms both;
+}
+.rank-up__hint {
+  margin-top: 18px;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  animation: fade-in 400ms ease 1.8s both;
+}
+
+@keyframes emblem-in {
+  from { transform: scale(0.6) rotate(-8deg); opacity: 0; }
+}
+@keyframes emblem-pop {
+  40% { transform: scale(1.14); filter: brightness(1.6); }
+}
+@keyframes bar-flash {
+  30% { filter: brightness(2.2); }
+}
+@keyframes verdict-in {
+  from { transform: translateY(6px) scale(0.92); opacity: 0; }
+}
+@keyframes near-pulse {
+  50% { opacity: 0.45; }
+}
+@keyframes line-in {
+  from { transform: translateY(6px) scale(0.9); opacity: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes sweep {
+  from { transform: translateX(-60%); }
+  to { transform: translateX(60%); }
+}
+@keyframes slam {
+  0% { transform: scale(2.6); opacity: 0; filter: blur(10px); }
+  60% { transform: scale(0.94); opacity: 1; filter: none; }
+  100% { transform: scale(1); }
+}
+@keyframes rise {
+  from { transform: translateY(14px); opacity: 0; }
+}

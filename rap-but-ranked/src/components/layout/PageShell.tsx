@@ -1,7 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { audio } from '../../audio/AudioEngine'
 import { router } from '../../app/router'
-import { BUILT_STAGE, MENU_ROUTES, type RouteId } from '../../app/routes'
+import { ALL_ROUTES, BUILT_STAGE, MENU_ROUTES, NAV_ROUTES, type RouteId } from '../../app/routes'
 import { Logo } from '../brand/Logo'
 import { StageLock } from '../ui/ui'
 import './PageShell.css'
@@ -10,9 +10,10 @@ import './PageShell.css'
  * Frame for every non-menu screen. The brand mark and the title share
  * view-transition names with the menu, so they morph rather than cut.
  */
-export function PageShell({ id, children, side, compact = false }: { id: RouteId; children: ReactNode; side?: ReactNode; compact?: boolean }) {
-  const meta = MENU_ROUTES.find((r) => r.id === id)!
-  const index = MENU_ROUTES.indexOf(meta)
+export function PageShell({ id, children, side, compact = false, title }: { id: RouteId; children: ReactNode; side?: ReactNode; compact?: boolean; title?: string }) {
+  const meta = ALL_ROUTES.find((r) => r.id === id)!
+  const numbered = [...MENU_ROUTES, ...NAV_ROUTES]
+  const index = numbered.indexOf(meta)
 
   const back = () => {
     audio.unlock()
@@ -52,9 +53,9 @@ export function PageShell({ id, children, side, compact = false }: { id: RouteId
           <kbd>Esc</kbd>
         </button>
         <div className="page__title-row">
-          <span className="page__index">0{index + 1}</span>
+          {index >= 0 && <span className="page__index">0{index + 1}</span>}
           <h1 className="page__title" style={{ viewTransitionName: `title-${id}` } as CSSProperties}>
-            {meta.label}
+            {title ?? meta.label}
           </h1>
           <span className="page__stage enter" style={{ '--i': 2 } as CSSProperties}>
             {meta.stage > BUILT_STAGE && id !== 'settings' ? <StageLock stage={meta.stage}>Opens in stage {meta.stage}</StageLock> : side}

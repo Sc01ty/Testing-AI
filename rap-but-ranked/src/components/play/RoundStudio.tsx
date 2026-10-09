@@ -8,6 +8,7 @@ import { encodeWav } from '../../audio/wav'
 import type { Round, SavedBeat, Session } from '../../domain/types'
 import { formatTime } from '../../lib/format'
 import { lineSyllables } from '../../lyrics/text'
+import { hotStreak } from '../../ranked/ladder'
 import { barsDone, gridOf, roundSections, runningScore, setRoundSection, totalRounds } from '../../play/sessionLogic'
 import { barBeatLabel, endLabel, lengthLabel } from '../../play/sectionWindow'
 import { forgetTake, rememberTake } from '../../play/takeAudio'
@@ -249,9 +250,10 @@ export function RoundStudio({
           <span className="eyebrow">
             {barsDone(session)} / {session.length} bars
           </span>
-          <span className="rank-mini" data-rank={running?.rank ?? '–'} title="Current rank">
-            <span className="eyebrow">Rank</span> <b>{running?.rank ?? '—'}</b>
+          <span className="rank-mini" data-rank={running?.rank ?? '–'} title="Track grade so far">
+            <span className="eyebrow">Grade</span> <b>{running?.rank ?? '—'}</b>
           </span>
+          <StreakChip session={session} />
           <button className="btn btn--ghost studio__help" onClick={() => (audio.play('confirm'), onHelp())}>
             <span>Help</span>
           </button>
@@ -424,4 +426,14 @@ function MicMeter({ active }: { active: boolean }) {
       </span>
     </span>
   )
+}
+
+/** A/S rounds in a row: 3 makes the track HOT (+10% RP). */
+function StreakChip({ session }: { session: Session }) {
+  const ranks = session.rounds.filter((r) => r.result).map((r) => r.result!.rank)
+  if (hotStreak(ranks)) return <span className="streak-chip" data-hot="" title="3 rounds in a row at A or S: +10% RP on this track">HOT STREAK · +10% RP</span>
+  let run = 0
+  for (let i = ranks.length - 1; i >= 0 && (ranks[i] === 'A' || ranks[i] === 'S'); i--) run++
+  if (!run) return null
+  return <span className="streak-chip" title="Get 3 rounds in a row at A or S for +10% RP">{run}/3 A-or-better for HOT</span>
 }

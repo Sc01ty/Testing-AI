@@ -1,5 +1,5 @@
 import { settingsStore, type Settings } from '../settings/settings'
-import { MUSIC_TRACKS, SCORE_NOTES, UI_SOUNDS, perceptualGain, riseNote, type MusicTrackId, type UiSoundId } from './sounds'
+import { FANFARES, MUSIC_TRACKS, SCORE_NOTES, noteFor, UI_SOUNDS, perceptualGain, riseNote, type MusicTrackId, type UiSoundId } from './sounds'
 
 /**
  * One AudioContext for the whole app, with separate buses:
@@ -294,6 +294,30 @@ class AudioEngine {
       src.onended = () => out.disconnect()
       src.start(ctx.currentTime + 0.005, n.onset)
     })
+  }
+
+  /** The promotion fanfare from the score notes, plus a low hit. */
+  playFanfare(kind: keyof typeof FANFARES) {
+    const ctx = this.ctx
+    if (!ctx || ctx.state !== 'running' || this.settings.muted) return
+    this.play('impactBig')
+    const t0 = ctx.currentTime + 0.01
+    for (const part of FANFARES[kind]) {
+      const { note, rate } = noteFor(part.semi)
+      const def = SCORE_NOTES[note]
+      void this.loadNote(def.url).then((n) => {
+        if (!n) return
+        const out = ctx.createGain()
+        out.gain.value = 0.2 * 10 ** (def.db / 20) * (part.gain ?? 1)
+        out.connect(this.uiBus)
+        const src = ctx.createBufferSource()
+        src.buffer = n.buffer
+        src.playbackRate.value = rate
+        src.connect(out)
+        src.onended = () => out.disconnect()
+        src.start(Math.max(ctx.currentTime, t0 + part.at), n.onset)
+      })
+    }
   }
 
   /** A note's buffer and where its sound actually starts (MP3s carry ~28 ms of leading silence). */

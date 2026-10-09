@@ -13,6 +13,9 @@ import { roomRequest, roomAudio, type RoomAccess, type RoomState, type TurnActiv
 import { RoomVoice } from './voice'
 import { saveDuo, getDuo } from './store'
 import { DuoView } from './DuoView'
+import { RpReveal } from '../components/ranked/RpReveal'
+import { roomEvent } from '../ranked/events'
+import { useAward } from '../ranked/useAward'
 import { TurnStudio, clearTurnDraft, type TurnSubmission } from './TurnStudio'
 import { waitingTip } from './tips'
 import { localModel } from '../director/localModel'
@@ -453,7 +456,10 @@ export function RoomView({ onLeave }: { onLeave: () => void }) {
               ) : s.status === 'complete' ? (
                 <>
                   {saved ? (
-                    <DuoView key={lastSaved.current} initial={saved} networkReadOnly />
+                    <>
+                      <RoomRp session={saved} me={myPlayer} />
+                      <DuoView key={lastSaved.current} initial={saved} networkReadOnly />
+                    </>
                   ) : (
                     <p>
                       Downloading both vocals and saving your combined track… <Button onClick={() => void safe(() => saveCompleted(room))}>Retry saving</Button>
@@ -692,4 +698,10 @@ function ParallelBoard({ s, me, myActivity, mateActivity, mateOnline }: { s: Duo
       })}
     </div>
   )
+}
+
+/** Your RP for your sections of the finished track (awarded once per track). */
+function RoomRp({ session, me }: { session: DuoSession; me: 0 | 1 }) {
+  const award = useAward(roomEvent(session, me), true)
+  return award.record ? <RpReveal award={award.record} animate={award.animate} /> : null
 }

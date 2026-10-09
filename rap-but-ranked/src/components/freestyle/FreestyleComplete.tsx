@@ -9,6 +9,9 @@ import { Icon } from '../beats/icons'
 import { openSavedShelf } from '../../app/navigation'
 import { VocalLane } from '../play/VocalLane'
 import { Landings } from './Landings'
+import { RpReveal } from '../ranked/RpReveal'
+import { freestyleEvent } from '../../ranked/events'
+import { useAward } from '../../ranked/useAward'
 
 /** A scored freestyle: rank, categories, which prompts you used, what you said, playback and export. */
 export function FreestyleComplete({
@@ -35,6 +38,7 @@ export function FreestyleComplete({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [mix, setMix] = useState<Awaited<ReturnType<typeof freestyleMix>> | null>(null)
   const total = f.bars * spBar
+  const award = useAward(freestyleEvent(f), !saved)
 
   useEffect(() => {
     let live = true
@@ -92,6 +96,8 @@ export function FreestyleComplete({
           </div>
         </div>
       </section>
+
+      {award.record && <RpReveal award={award.record} animate={award.animate} />}
 
       <section className="complete__cats enter" style={{ '--i': 2 } as CSSProperties}>
         {r.categories.map((c) => (

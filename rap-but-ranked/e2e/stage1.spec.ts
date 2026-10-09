@@ -50,7 +50,7 @@ test('a click during the sting skips straight to the menu', async ({ page }) => 
   await expect(page.locator('.title')).toBeVisible()
 })
 
-test('menu: four options, keyboard selection and confirm', async ({ page }) => {
+test('menu: four options + FEED / LEADERBOARDS row, keyboard selection and confirm', async ({ page }) => {
   const errors = collectErrors(page)
   await enterMenu(page)
   const items = page.locator('.menu__item')
@@ -58,7 +58,14 @@ test('menu: four options, keyboard selection and confirm', async ({ page }) => {
   await expect(items.nth(0)).toHaveAttribute('data-active', '')
   await page.keyboard.press('ArrowDown')
   await expect(items.nth(1)).toHaveAttribute('data-active', '')
+  const nav = page.locator('.menu-nav__item')
+  await expect(nav).toHaveText([/FEED/, /LEADERBOARDS/])
+  // up from PLAY wraps to the bottom row; left/right move along it
   await page.keyboard.press('ArrowUp')
+  await page.keyboard.press('ArrowUp')
+  await expect(nav.nth(1)).toHaveAttribute('data-active', '')
+  await page.keyboard.press('ArrowLeft')
+  await expect(nav.nth(0)).toHaveAttribute('data-active', '')
   await page.keyboard.press('ArrowUp')
   await expect(items.nth(3)).toHaveAttribute('data-active', '')
   await page.keyboard.press('Enter')

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { audio } from '../audio/AudioEngine'
 import { settingsStore } from '../settings/settings'
 import { Background } from '../components/layout/Background'
@@ -8,11 +8,19 @@ import { FreestyleView } from '../views/FreestyleView'
 import { MenuView } from '../views/MenuView'
 import { PlayView } from '../views/PlayView'
 import { SettingsView } from '../views/SettingsView'
+import { AdminView } from '../views/AdminView'
+import { FeedView } from '../views/FeedView'
+import { LeaderboardsView } from '../views/LeaderboardsView'
+import { ProfileView } from '../views/ProfileView'
+import { accountStore } from '../social/account'
 import type { RouteId } from './routes'
 import { useRoute } from './router'
 
 export function App() {
   const route = useRoute()
+  useLayoutEffect(() => {
+    document.documentElement.dataset.surface = route === 'feed' ? 'feed' : 'game'
+  }, [route])
   const prev = useRef<RouteId | null>(null)
   const from = prev.current
   useEffect(() => {
@@ -26,6 +34,7 @@ export function App() {
     // Try straight away: works if the browser already allows autoplay here.
     // Otherwise audio (and the menu theme) starts on the first click or key press.
     audio.unlock()
+    void accountStore.refresh()
     const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 300))
     idle(() => audio.preloadMusic('menu'))
     const unlock = () => audio.unlock()
@@ -56,6 +65,10 @@ export function App() {
       {route === 'beats' && <BeatsView />}
       {route === 'freestyle' && <FreestyleView />}
       {route === 'settings' && <SettingsView />}
+      {route === 'feed' && <FeedView />}
+      {route === 'leaderboards' && <LeaderboardsView />}
+      {route === 'profile' && <ProfileView />}
+      {route === 'admin' && <AdminView />}
       <SoundToggle />
     </>
   )

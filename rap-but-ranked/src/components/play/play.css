@@ -1611,3 +1611,27 @@
 :root[data-motion='reduced'] .section-editor__window[data-bump] {
   animation: none;
 }
+
+/* live hot-streak progress in the studio header */
+.streak-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.streak-chip[data-hot] {
+  border-color: rgb(255 150 70 / 0.6);
+  color: #ffb36b;
+  background: rgb(255 120 40 / 0.1);
+  box-shadow: 0 0 18px rgb(255 120 40 / 0.25);
+  animation: streak-glow 1.6s ease-in-out infinite;
+}
+@keyframes streak-glow {
+  50% {
+    box-shadow: 0 0 26px rgb(255 120 40 / 0.45);
+  }
+}

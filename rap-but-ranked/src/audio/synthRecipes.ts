@@ -152,3 +152,48 @@ export const remove: SynthRecipe = (ctx, out, t) => {
   tone(ctx, out, t, { type: 'triangle', from: 330, to: 140, glide: 0.18, peak: 0.07, decay: 0.2, lowpass: 1200 })
   noiseBurst(ctx, out, t, { type: 'lowpass', from: 1800, to: 300, peak: 0.03, attack: 0.005, decay: 0.2 })
 }
+
+// ── ranked: RP and rank changes ────────────────────────────────────
+// Stand-ins until the FL exports are dropped in (see public/audio/ui/ranked/README.md).
+
+/** One RP counted: tiny bright pluck. */
+export const rpTick: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { type: 'triangle', from: 1760, to: 1500, glide: 0.03, peak: 0.035, decay: 0.04, lowpass: 5000 })
+}
+
+/** The bar filling: a 1.6 s rising air sweep. */
+export const rpFill: SynthRecipe = (ctx, out, t) => {
+  noiseBurst(ctx, out, t, { type: 'bandpass', from: 400, to: 5200, q: 2.2, peak: 0.05, attack: 1.4, decay: 0.25 })
+  tone(ctx, out, t, { type: 'sawtooth', from: 110, to: 440, glide: 1.5, peak: 0.018, attack: 1.3, decay: 0.2, lowpass: 1400 })
+}
+
+/** A division up: two bright notes a third apart. */
+export const divisionUp: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { type: 'triangle', from: 1046.5, peak: 0.08, decay: 0.3, lowpass: 4000 })
+  tone(ctx, out, t + 0.09, { type: 'triangle', from: 1318.5, peak: 0.08, decay: 0.55, lowpass: 4200 })
+  tone(ctx, out, t, { from: 130, to: 65, glide: 0.12, peak: 0.16, decay: 0.16 })
+}
+
+/** Ended within a few RP of the next division: a swell that cuts off. */
+export const nearMiss: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { type: 'sawtooth', from: 220, to: 233, glide: 0.6, peak: 0.03, attack: 0.55, decay: 0.08, lowpass: 900 })
+  tone(ctx, out, t, { type: 'sawtooth', from: 277, to: 294, glide: 0.6, peak: 0.022, attack: 0.55, decay: 0.08, lowpass: 900 })
+}
+
+/** Dropped a division or tier: quiet, short, two notes down. */
+export const demote: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { type: 'triangle', from: 523, peak: 0.06, decay: 0.2, lowpass: 1500 })
+  tone(ctx, out, t + 0.14, { type: 'triangle', from: 392, to: 370, peak: 0.06, decay: 0.42, lowpass: 1200 })
+}
+
+/** Rap published to the Feed. */
+export const publish: SynthRecipe = (ctx, out, t) => {
+  noiseBurst(ctx, out, t, { type: 'bandpass', from: 700, to: 6000, q: 1.2, peak: 0.05, attack: 0.1, decay: 0.18 })
+  tone(ctx, out, t + 0.12, { type: 'triangle', from: 784, peak: 0.06, decay: 0.2, lowpass: 3000 })
+  tone(ctx, out, t + 0.2, { type: 'triangle', from: 1175, peak: 0.06, decay: 0.4, lowpass: 3600 })
+}
+
+/** Like: a soft pop. */
+export const like: SynthRecipe = (ctx, out, t) => {
+  tone(ctx, out, t, { from: 600, to: 1200, glide: 0.05, peak: 0.06, decay: 0.08 })
+}

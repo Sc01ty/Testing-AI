@@ -14,6 +14,9 @@ import { Waveform } from '../beats/Waveform'
 import { Icon } from '../beats/icons'
 import { openSavedShelf } from '../../app/navigation'
 import { VocalRegions, type VocalShape } from './SongTimeline'
+import { RpReveal } from '../ranked/RpReveal'
+import { trackEvent } from '../../ranked/events'
+import { useAward } from '../../ranked/useAward'
 
 export type Tab = 'lyrics' | 'rounds'
 
@@ -54,6 +57,7 @@ export function TrackComplete({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [track, setTrack] = useState<Awaited<ReturnType<typeof buildFullTrack>> | null>(null)
   const revealed = useRef(false)
+  const award = useAward(trackEvent(originalSession), !saved)
 
   useEffect(() => {
     if (revealed.current || saved) return
@@ -191,6 +195,8 @@ export function TrackComplete({
           </div>
         </div>
       </section>
+
+      {award.record && <RpReveal award={award.record} animate={award.animate} />}
 
       <section className="complete__cats enter" style={{ '--i': 2 } as CSSProperties}>
         {final.averages.map((c) => (
